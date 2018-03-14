@@ -134,8 +134,6 @@ You're free to use this package, but if it makes it to your production environme
 
 Our address is: ACF Bentveld, Ecu 2 8305 BA, Emmeloord, Netherlands.
 
-We publish all received postcards [on our company website](https://spatie.be/en/opensource/postcards).
-
 ## Credits
 
 - [Wim Pruiksma](https://github.com/wimurk)
