@@ -1,6 +1,6 @@
 <?php
 
-namespace ACFBentveld\DataTables;
+namespace App\Helpers;
 use Request;
 
 /**
@@ -104,6 +104,8 @@ class DataTables
         $class = (new DataTables);
         if(Request::has('response')){
             $class->response = Request::get('response');
+        }elseif(Request::has('draw')){
+            $class->response = 'json';
         }
         $col = $class->init($class);
         $col->model = $model;
@@ -121,6 +123,8 @@ class DataTables
         $class = (new DataTables);
         if(Request::has('response')){
             $class->response = Request::get('response');
+        }elseif(Request::has('draw')){
+            $class->response = 'json';
         }
         $col = $class->init($class);
         $col->collection = $model;
@@ -369,7 +373,7 @@ class DataTables
                 if($this->withKeys){
                     $items[$i][$allowed] = (in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
                 }else{
-                    $items[$i][] = (in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
+                    $items[$i][] = ($this->encrypt && in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
                 }
             }
             $i++;
