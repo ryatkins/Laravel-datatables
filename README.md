@@ -10,7 +10,7 @@ This repo contains a Datatable that can render a filterable and sortable table. 
 You can install the package via composer:
 
 ```bash
-composer require ACFBentveld/DataTables
+composer require acfbentveld/laravel-datatables
 ```
 
 ## Usage
