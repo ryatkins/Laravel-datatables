@@ -1,31 +1,119 @@
-# Very short description of the package
+# Datatables that supports pagination and recursive searching in relations
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/acfbentveld/laravel-datatables.svg?style=flat-square)](https://packagist.org/packages/acfbentveld/laravel-datatables)
 [![Total Downloads](https://img.shields.io/packagist/dt/acfbentveld/laravel-datatables.svg?style=flat-square)](https://packagist.org/packages/acfbentveld/laravel-datatables)
 
-**Note:** Replace ```:author_name``` ```:author_username``` ```:author_email``` ```:package_name``` ```:package_description``` with their correct values in [README.md](README.md), [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), [LICENSE.md](LICENSE.md) and [composer.json](composer.json) files, then delete this line.
-
-This is where your description should go. Try and limit it to a paragraph or two, and maybe throw in a mention of what PSRs you support to avoid any confusion with users and contributors.
+This repo contains a Datatable that can render a filterable and sortable table. It aims to be very lightweight and easy to use. It has support for retrieving data asynchronously, pagination and recursive searching in relations.
 
 ## Installation
 
 You can install the package via composer:
 
 ```bash
-composer require spatie/:package_name
+composer require ACFBentveld/DataTables
 ```
 
 ## Usage
-
+### php
+The package supports 2 ways to process the data. The firts one is the collect method. YOu send the collection the model returns to the package. 
 ``` php
-$skeleton = new Spatie\Skeleton();
-echo $skeleton->echoPhrase('Hello, Spatie!');
+$users = DataTables::collect(User::all())->get();
+```
+The second method (recommended) is the model method. Create a new model instance. This will it is easier to manipulate the collection
+``` php
+$users = DataTables::model(new User)->get();
+```
+### javascript | jquery
+You don't have to specify a different url. The package will detect if the datatable makes connection
+``` javascript
+ $(document).ready(function() {
+    //thats all
+    $('#datatable').DataTable({
+        "processing": true, //process it
+        "serverSide": true, //make it server side
+        "ajax": location.href //Just get the data from the same url. The package will handle it all
+    });
+
+} );
 ```
 
-### Testing
+### html
+At last make a html table. No need to tell you how that works.
+``` html
+<table id="datatable" class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>name</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!--You dont have to put any data in here. The datatable will fill it-->   
+    </tbody>
+</table>
+```
 
-``` bash
-composer test
+### Important!!!
+The datatable always expects strict data. If you have 2 table heads (th) in your table. Don't return an collection with 5 keys! Or just use the selecter down below.
+
+When calling model like `User::all()` it returns at least a few keys like id,name,email,password etc...
+Datatable needs strict data to work properly. 
+
+``` php
+$model = User::select(['id', 'name'])->get(); // you ahve to selecvt them before passing them to the datatable
+$users = DataTables::collect($model)->get(); // will return only the keys id and name
+```
+Recommended
+``` php
+$users = DataTables::model(new User)->select(['id', name])->get(); // Using the model method you can use the selecter
+```
+
+## Options
+
+- where
+    * Just the regular where method. Use it to filter the model
+```php
+ DataTables::model(new User)->where('name', 'John Snow')->where('email', 'knows@nothing.com')->get();
+```
+- encrypt
+    * Sometimes you want to encrypt a specif value. Like the ID of a model.
+``` php
+DataTables::model(new User)->encrypt(['id'])->get(); // will return all items with an encrypted value
+```
+
+- noSelect
+    * The noSelect method return everything except the given keys
+``` php
+ DataTables::model(new User)->noSelect(['id'])->get(); //removes the id key from the collection
+```
+- withKeys
+    * By default the package returns the collection without it's keys. 
+``` php
+DataTables::model(new User)->withKeys(false)->get();
+```
+above will return `["foo", "bar@mail.com"]`
+
+```php
+DataTables::model(new User)->withKeys(true)->get();
+```
+above will return `above will return [name => "foo", email => "bar@mail.com"]`
+
+- datatable options
+    * when using withKeys set to true. You have to define the keys returned to the datatable.
+``` javascript
+ $(document).ready(function() {
+    //thats all
+    $('#datatable').DataTable({
+        "processing": true, //process it
+        "serverSide": true, //make it server side
+        "ajax": location.href, //Just get the data from the same url. The package will handle it all
+        "columns": [ //define the keys
+                { "data": "id" },
+                { "data": "name" },
+            ]
+    });
+
+} );
 ```
 
 ### Changelog
@@ -38,27 +126,21 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ### Security
 
-If you discover any security related issues, please email freek@spatie.be instead of using the issue tracker.
+If you discover any security related issues, please email wim@acfbentveld.nl instead of using the issue tracker.
 
 ## Postcardware
 
 You're free to use this package, but if it makes it to your production environment we highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using.
 
-Our address is: Spatie, Samberstraat 69D, 2060 Antwerp, Belgium.
+Our address is: ACF Bentveld, Ecu 2 8305 BA, Emmeloord, Netherlands.
 
 We publish all received postcards [on our company website](https://spatie.be/en/opensource/postcards).
 
 ## Credits
 
-- [:author_name](https://github.com/:author_username)
+- [Wim Pruiksma](https://github.com/wimurk)
+- [Amando Vledder](https://github.com/AmandoVledder)
 - [All Contributors](../../contributors)
-
-## Support us
-
-Spatie is a webdesign agency based in Antwerp, Belgium. You'll find an overview of all our open source projects [on our website](https://spatie.be/opensource).
-
-Does your business depend on our contributions? Reach out and support us on [Patreon](https://www.patreon.com/spatie). 
-All pledges will be dedicated to allocating workforce on maintenance and new awesome stuff.
 
 ## License
 
