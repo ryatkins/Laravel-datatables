@@ -19,6 +19,6 @@ class DataTablesServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->app->bind('DataTables', 'ACFBentveld\DataTables\DataTables');
     }
 }
