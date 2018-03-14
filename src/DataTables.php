@@ -371,7 +371,7 @@ class DataTables
         foreach($this->collection->slice($this->start, $this->collection->count())->take($this->length) as $value){
             foreach($this->keys as $allowed){
                 if($this->withKeys){
-                    $items[$i][$allowed] = (in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
+                    $items[$i][$allowed] = ($this->encrypt && in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
                 }else{
                     $items[$i][] = ($this->encrypt && in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
                 }
