@@ -40,6 +40,8 @@ You don't have to specify a different url. The package will detect if the datata
 ### html
 At last make a html table. No need to tell you how that works.
 ``` html
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/dt-1.10.16/datatables.min.css"/>
+
 <table id="datatable" class="table">
     <thead>
         <tr>
@@ -51,6 +53,8 @@ At last make a html table. No need to tell you how that works.
         <!--You dont have to put any data in here. The datatable will fill it-->   
     </tbody>
 </table>
+
+<script type="text/javascript" src="https://cdn.datatables.net/v/bs/dt-1.10.16/datatables.min.js"></script>
 ```
 
 ### Important!!!
