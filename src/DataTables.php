@@ -102,11 +102,6 @@ class DataTables
     public static function model(\Illuminate\Database\Eloquent\Model $model)
     {
         $class = (new DataTables);
-        if(Request::has('response')){
-            $class->response = Request::get('response');
-        }elseif(Request::has('draw')){
-            $class->response = 'json';
-        }
         $col = $class->init($class);
         $col->model = $model;
         return $col;
@@ -121,11 +116,6 @@ class DataTables
     public static function collect(\Illuminate\Database\Eloquent\Collection $model)
     {
         $class = (new DataTables);
-        if(Request::has('response')){
-            $class->response = Request::get('response');
-        }elseif(Request::has('draw')){
-            $class->response = 'json';
-        }
         $col = $class->init($class);
         $col->collection = $model;
         return $col;
@@ -139,9 +129,17 @@ class DataTables
      */
     public function init($class)
     {
+        if(Request::has('response')){
+            $class->response = Request::get('response');
+        }elseif(Request::has('draw')){
+            $class->response = 'json';
+        }
         $class->draw = Request::get('draw');
         $class->columns = Request::get('columns');
-        $class->order = Request::get('order');
+        $class->order = [
+            'column' => $class->columns[Request::get('order')[0]['column']]['data'],
+            'dir' => Request::get('order')[0]['dir']
+        ];
         $class->start = Request::get('start');
         $class->length = Request::get('length');
         $class->search = Request::get('search');
@@ -159,17 +157,7 @@ class DataTables
             return true;
         }
         foreach($this->collection as $key => $model){
-            $forget = true;
-            foreach($model->toArray() as $value){
-                if(is_array($value)){
-                    $forget = $this->deepSearch($value);
-                    continue;
-                }
-                if (strpos(strtolower($value), strtolower($this->search['value'])) !== false) {
-                    $forget = false;
-                    break;
-                }
-            }
+            $forget = $this->compareKeys($model->toArray(), true);
             if($forget){
                 $this->collection->forget($key);
             }
@@ -178,36 +166,45 @@ class DataTables
     }
 
     /**
-     * Deep search relations
+     * Compare the keys witht he search value
      *
-     * @param array $items
+     * @param type $model
+     * @param type $forget
+     * @return boolean
      */
-    private function deepSearch(array $items)
+    private function compareKeys($model, $forget)
     {
-        $forget = true;
-        foreach($items as $fields){
-            if(!is_array($fields)){
-                return true;
+        foreach ($model as $value) {
+
+            if (is_array($value)) {
+                $forget = $this->compareKeys($value, $forget);
+                continue;
             }
-            foreach($fields as $key => $value){
-                if(is_array($value)){
-                    $forget = $this->deepSearch($value);
-                    continue;
-                }
-                if (strpos(strtolower($value), strtolower($this->search['value'])) !== false) {
-                    return false;
-                }
+            if ($this->compareValue($value)) {
+                $forget = false;
+                break;
             }
         }
         return $forget;
     }
 
     /**
+     * Compare 2 string
+     *
+     * @param type $key
+     * @return type
+     */
+    private function compareValue($key)
+    {
+        return (strpos(strtolower($key), strtolower($this->search['value'])) !== false)?true:false;
+    }
+
+
+    /**
      * Set with paramaters
      *
      * @param array $with
      * @return $this
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     public function with(array $with)
     {
@@ -220,7 +217,6 @@ class DataTables
      *
      * @param boolean $with
      * @return $this
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     public function withKeys(bool $with)
     {
@@ -259,7 +255,6 @@ class DataTables
      *
      * @param array $noselect
      * @return $this
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     public function noSelect(array $noselect)
     {
@@ -272,7 +267,6 @@ class DataTables
      *
      * @param array $keys
      * @return $this
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     public function select(array $keys)
     {
@@ -285,7 +279,6 @@ class DataTables
      *
      * @param int $num
      * @return type
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     public function paginate(int $num)
     {
@@ -303,6 +296,12 @@ class DataTables
         if($this->model){
             $this->buildCollection();
         }
+        if(!$this->model && $this->with){
+            $this->makeRelation();
+        }
+        if($this->order){
+            $this->order();
+        }
         if($this->search){
             $this->search();
         }
@@ -313,11 +312,11 @@ class DataTables
         return $this->collection;
     }
 
+
     /**
      * Return the collection in given response type
      *
      * @return $this->response
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     private function response()
     {
@@ -336,9 +335,8 @@ class DataTables
      * Get the collection data
      *
      * @return boolean
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
-    public function buildCollection()
+    private function buildCollection()
     {
         $query = $this->model;
         if($this->keys){
@@ -354,6 +352,37 @@ class DataTables
         }
         $this->collection = $query->get();
         $this->model = $query;
+        return true;
+    }
+
+    /**
+     * Create relations with the collection
+     * Does not apply for models.
+     *
+     * @return boolean
+     */
+    private function makeRelation()
+    {
+        foreach($this->collection as $k => $val){
+            foreach($this->with as $value){
+                $this->collection[$k]->{$value};
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Sort the collection with given column and direction
+     *
+     * @return boolean
+     */
+    private function order()
+    {
+        if($this->order['dir'] === 'asc'){
+            $this->collection = $this->collection->sortBy($this->order['column']);
+        }else{
+            $this->collection = $this->collection->sortByDesc($this->order['column']);
+        }
         return true;
     }
 
@@ -384,7 +413,6 @@ class DataTables
     /**
      * If the keys are not given, create default keys
      *
-     * @author Wim Pruiksma <wim@acfbentveld.nl>
      */
     private function makeKeys()
     {
