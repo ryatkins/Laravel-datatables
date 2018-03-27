@@ -69,7 +69,7 @@ $users = DataTables::collect($model)->get(); // will return only the keys id and
 ```
 Recommended
 ``` php
-$users = DataTables::model(new User)->select(['id', name])->get(); // Using the model method you can use the selecter
+$users = DataTables::model(new User)->select(['id', 'name'])->get(); // Using the model method you can use the selecter
 ```
 
 ## Options
@@ -114,7 +114,17 @@ above will return `above will return [name => "foo", email => "bar@mail.com"]`
         "columns": [ //define the keys
                 { "data": "id" },
                 { "data": "name" },
-            ]
+            ],
+        //if you want to use relations or chage the behavior of a cell
+        "columnDefs": [
+                {
+                    "render": function ( data, type, row ) {
+                        //for relations just return the relation key
+                        return data.name;
+                    },
+                    "targets": [0] //the targets, starts at 0
+                },
+            ],
     });
 
 } );
