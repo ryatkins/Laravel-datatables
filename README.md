@@ -79,6 +79,11 @@ $users = DataTables::model(new User)->select(['id', 'name'])->get(); // Using th
 ```php
  DataTables::model(new User)->where('name', 'John Snow')->where('email', 'knows@nothing.com')->get();
 ```
+- with
+    * Just the regular with method. Selects the relations with it
+```php
+ DataTables::model(new User)->with(['roles', 'permissions'])->get();
+```
 - encrypt
     * Sometimes you want to encrypt a specif value. Like the ID of a model.
 ``` php
