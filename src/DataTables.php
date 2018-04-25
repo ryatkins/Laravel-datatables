@@ -113,7 +113,7 @@ class DataTables
      * @param type $model
      * @return class DataTables
      */
-    public static function collect(\Illuminate\Database\Eloquent\Collection $model)
+    public static function collect($model)
     {
         $class = (new DataTables);
         $col = $class->init($class);
@@ -236,6 +236,7 @@ class DataTables
             'key' => $key,
             'value' => $value
         );
+        return $this;
     }
 
     /**
