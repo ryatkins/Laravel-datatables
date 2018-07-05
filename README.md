@@ -74,29 +74,29 @@ $users = DataTables::model(new User)->select(['id', 'name'])->get(); // Using th
 
 ## Options
 
-- where
-    * Just the regular where method. Use it to filter the model
+##### where
+Just the regular where method. Use it to filter the model
 ```php
  DataTables::model(new User)->where('name', 'John Snow')->where('email', 'knows@nothing.com')->get();
 ```
-- with
-    * Just the regular with method. Selects the relations with it
+##### with
+Just the regular with method. Selects the relations with it
 ```php
  DataTables::model(new User)->with(['roles', 'permissions'])->get();
 ```
-- encrypt
-    * Sometimes you want to encrypt a specif value. Like the ID of a model.
+##### encrypt
+Sometimes you want to encrypt a specif value. Like the ID of a model.
 ``` php
 DataTables::model(new User)->encrypt(['id'])->get(); // will return all items with an encrypted value
 ```
 
-- noSelect
-    * The noSelect method return everything except the given keys
+##### noSelect
+The noSelect method return everything except the given keys
 ``` php
  DataTables::model(new User)->noSelect(['id'])->get(); //removes the id key from the collection
 ```
-- withKeys
-    * By default the package returns the collection without it's keys. 
+##### withKeys
+By default the package returns the collection without it's keys. 
 ``` php
 DataTables::model(new User)->withKeys(false)->get();
 ```
@@ -107,8 +107,19 @@ DataTables::model(new User)->withKeys(true)->get();
 ```
 above will return `above will return [name => "foo", email => "bar@mail.com"]`
 
-- datatable options
-    * when using withKeys set to true. You have to define the keys returned to the datatable.
+##### Scopes
+When trying to access scopes from your model, you can use the addScope method to add scopes to your collection.
+```php
+    DataTables::model(new User)->addScope('firstName')->withKeys(true)->get(); //Access the scopeFirstName
+```
+Adding data to the scope
+```php
+    DataTables::model(new User)->addScope('formatDate', 'some data')->withKeys(true)->get(); //Access the scopeFormatDate with data
+```
+
+
+##### datatable options
+when using withKeys set to true. You have to define the keys returned to the datatable.
 ``` javascript
  $(document).ready(function() {
     //thats all
