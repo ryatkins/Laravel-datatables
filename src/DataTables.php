@@ -10,10 +10,10 @@ use Request;
  */
 class DataTables
 {
-    
+
     /**
      * The collection items used to process the data
-     * 
+     *
      * @default null
      * @var collection
      */
@@ -53,7 +53,7 @@ class DataTables
 
     /**
      * Set relation
-     * 
+     *
      * @default null
      * @var array
      */
@@ -92,8 +92,15 @@ class DataTables
      */
     protected $where;
 
+    /**
+     * Add Model scopes
+     *
+     * @var array
+     */
+    protected $scopes = [];
 
-    
+
+
     /**
      *
      * @param \Illuminate\Database\Eloquent\Model $model
@@ -276,6 +283,22 @@ class DataTables
     }
 
     /**
+     * Add Scope
+     *
+     * @param string $scope
+     * @param type $data
+     * @return $this
+     */
+    public function addScope(string $scope, $data = null)
+    {
+        $this->scopes[] = [
+            'scope' => $scope,
+            'data' => $data
+        ];
+        return $this;
+    }
+
+    /**
      * Set limit for returning items
      *
      * @param int $num
@@ -351,9 +374,24 @@ class DataTables
                 $query = $query->where($where['key'], $where['value']);
             }
         }
+        $query = $this->getScopes($query);
         $this->collection = $query->get();
         $this->model = $query;
         return true;
+    }
+
+    /**
+     * Add scope to the query
+     *
+     * @param type $query
+     * @return $query
+     */
+    public function getScopes($query)
+    {
+        foreach($this->scopes as $scope){
+            $query = $query->{$scope['scope']}($scope['data']);
+        }
+        return $query;
     }
 
     /**
