@@ -99,6 +99,13 @@ class DataTables
      */
     protected $scopes = [];
 
+    /**
+     * Return values with trashed or not
+     *
+     * @var boolean
+     */
+    protected $withTrashed = false;
+
 
 
     /**
@@ -228,6 +235,16 @@ class DataTables
     public function withKeys(bool $with)
     {
         $this->withKeys = $with;
+        return $this;
+    }
+
+    /**
+     * Return values with trashed items
+     * 
+     */
+    public function withTrashed()
+    {
+        $this->withTrashed = true;
         return $this;
     }
 
@@ -373,6 +390,9 @@ class DataTables
             foreach($this->where as $where){
                 $query = $query->where($where['key'], $where['value']);
             }
+        }
+        if($this->withTrashed){
+            $query = $query->withTrashed();
         }
         $query = $this->getScopes($query);
         $this->collection = $query->get();
