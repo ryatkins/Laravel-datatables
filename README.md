@@ -117,6 +117,12 @@ Adding data to the scope
     DataTables::model(new User)->addScope('formatDate', 'some data')->withKeys(true)->get(); //Access the scopeFormatDate with data
 ```
 
+##### with trashed
+TO retrieve the soft delete items from your database, you can use the default `withTrashed` method.
+```php
+    DataTables::model(new User)->withTrashed()->get(); //Retrieve the soft deleted items also
+```
+
 
 ##### datatable options
 when using withKeys set to true. You have to define the keys returned to the datatable.
