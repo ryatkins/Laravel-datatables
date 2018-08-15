@@ -254,11 +254,12 @@ class DataTables
      * @param string $key
      * @param string $value
      */
-    public function where(string $key, string $value)
+    public function where(string $key, string $type, $value = false)
     {
         $this->where[] = array(
             'key' => $key,
-            'value' => $value
+            'value' => (!$value)?$type:$value,
+            'type' => (!$value)?'=':$type,
         );
         return $this;
     }
@@ -388,7 +389,7 @@ class DataTables
         }
         if($this->where){
             foreach($this->where as $where){
-                $query = $query->where($where['key'], $where['value']);
+                $query = $query->where($where['key'], $where['type'] , $where['value']);
             }
         }
         if($this->withTrashed){
