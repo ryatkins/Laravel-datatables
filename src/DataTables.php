@@ -93,6 +93,14 @@ class DataTables
     protected $where;
 
     /**
+     * Where year keys for query
+     *
+     * @default null
+     * @var array
+     */
+    protected $whereYear;
+
+    /**
      * Add Model scopes
      *
      * @var array
@@ -265,6 +273,21 @@ class DataTables
     }
 
     /**
+     *
+     * @return $this
+     */
+    public function whereYear(string $key, string $type, $value = false)
+    {
+        $this->whereYear[] = array(
+            'key' => $key,
+            'value' => (!$value)?$type:$value,
+            'type' => (!$value)?'=':$type,
+        );
+        return $this;
+    }
+
+
+    /**
      * Set keys that need to be encrypted
      *
      * @param array $encrypt
@@ -390,6 +413,11 @@ class DataTables
         if($this->where){
             foreach($this->where as $where){
                 $query = $query->where($where['key'], $where['type'] , $where['value']);
+            }
+        }
+        if($this->whereYear){
+            foreach($this->whereYear as $whereYear){
+                $query = $query->whereYear($whereYear['key'], $whereYear['type'] , $whereYear['value']);
             }
         }
         if($this->withTrashed){
