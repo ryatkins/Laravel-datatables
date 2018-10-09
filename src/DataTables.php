@@ -298,12 +298,11 @@ class DataTables
      *
      * @return $this
      */
-    public function whereYear(string $key, string $type, $value = false)
+    public function whereYear(string $key, $value)
     {
         $this->whereYear[] = array(
             'key' => $key,
-            'value' => (!$value)?$type:$value,
-            'type' => (!$value)?'=':$type,
+            'value' => $value
         );
         return $this;
     }
@@ -444,7 +443,7 @@ class DataTables
         }
         if($this->whereYear){
             foreach($this->whereYear as $whereYear){
-                $query = $query->whereYear($whereYear['key'], $whereYear['type'] , $whereYear['value']);
+                $query = $query->whereYear($whereYear['key'], $whereYear['value']);
             }
         }
         if($this->withTrashed){
