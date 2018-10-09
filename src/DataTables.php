@@ -93,6 +93,13 @@ class DataTables
     protected $where;
 
     /**
+     * WhereHas keys for query
+     *
+     * @var array
+     */
+    protected $whereHas;
+
+    /**
      * Where year keys for query
      *
      * @default null
@@ -273,6 +280,21 @@ class DataTables
     }
 
     /**
+     * Set whereHas keys
+     *
+     * @param string $key
+     * @param string $value
+     */
+    public function whereHas(string $key, $value = null)
+    {
+        $this->whereHas[] = array(
+            'key' => $key,
+            'value' => $value
+        );
+        return $this;
+    }
+
+    /**
      *
      * @return $this
      */
@@ -413,6 +435,11 @@ class DataTables
         if($this->where){
             foreach($this->where as $where){
                 $query = $query->where($where['key'], $where['type'] , $where['value']);
+            }
+        }
+        if($this->whereHas){
+            foreach($this->whereHas as $whereHas){
+                $query = $query->whereHas($whereHas['key'], $whereHas['value']);
             }
         }
         if($this->whereYear){
