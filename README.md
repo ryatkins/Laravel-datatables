@@ -79,6 +79,19 @@ Just the regular where method. Use it to filter the model
 ```php
  DataTables::model(new User)->where('name', 'John Snow')->where('email', 'knows@nothing.com')->get();
 ```
+##### whereHas
+Just the regular whereHas method. Use it to filter the model
+```php
+ DataTables::model(new User)->whereHas('roles')->get();
+ DataTables::model(new User)->whereHas('roles', function($query){
+   $query->whereName('admin');
+ })->get();
+```
+##### whereYear
+Just the regular whereYear method. Use it to filter the model
+```php
+ DataTables::model(new User)->whereYear('created_at', '2018')->get();
+```
 ##### with
 Just the regular with method. Selects the relations with it
 ```php
