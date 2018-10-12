@@ -225,7 +225,12 @@ class DataTables
      */
     private function compareValue($key)
     {
-        return (strpos(strtolower($key), strtolower($this->search['value'])) !== false)?true:false;
+        try{
+            return (strpos(strtolower($key), strtolower($this->search['value'])) !== false)?true:false;
+        } catch (\Exception $ex) {
+            return false;
+        }
+        
     }
 
 
@@ -298,11 +303,12 @@ class DataTables
      *
      * @return $this
      */
-    public function whereYear(string $key, $value)
+    public function whereYear(string $key, string $type, $value = false)
     {
         $this->whereYear[] = array(
             'key' => $key,
-            'value' => $value
+            'value' => (!$value)?$type:$value,
+            'type' => (!$value)?'=':$type,
         );
         return $this;
     }
@@ -443,7 +449,7 @@ class DataTables
         }
         if($this->whereYear){
             foreach($this->whereYear as $whereYear){
-                $query = $query->whereYear($whereYear['key'], $whereYear['value']);
+                $query = $query->whereYear($whereYear['key'], $whereYear['type'] , $whereYear['value']);
             }
         }
         if($this->withTrashed){
