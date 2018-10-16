@@ -165,6 +165,9 @@ when using withKeys set to true. You have to define the keys returned to the dat
 } );
 ```
 
+#### Reversed searching
+Yes this package supports reverse searching. When you type "john doe" in the datatable search bar, it will show you all the results that contains the search string. Now with reversed searching you can type "!john doe" this will show you every result that do not contain the search string. Use the `!` before your search string to trigger the event.
+
 ### Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information what has changed recently.
