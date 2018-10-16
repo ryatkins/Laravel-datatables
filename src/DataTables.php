@@ -52,6 +52,13 @@ class DataTables
     protected $search;
 
     /**
+     * Reverse search for quering
+     *
+     * @var bool
+     */
+    protected $reverseSearch = false;
+
+    /**
      * Set relation
      *
      * @default null
@@ -176,7 +183,7 @@ class DataTables
     }
 
     /**
-     * Search int he collection
+     * Search inthe collection
      *
      * @return boolean
      */
@@ -185,9 +192,16 @@ class DataTables
         if(!$this->search['value'] || !$this->collection){
             return true;
         }
+        if(starts_with($this->search['value'], '!')){
+            $this->reverseSearch = true;
+            $this->search['value'] = str_replace('!', '', $this->search['value']);
+        }
         foreach($this->collection as $key => $model){
             $forget = $this->compareKeys($model->toArray(), true);
-            if($forget){
+            if($forget && !$this->reverseSearch){
+                $this->collection->forget($key);
+            }
+            if(!$forget && $this->reverseSearch){
                 $this->collection->forget($key);
             }
         }
@@ -204,7 +218,6 @@ class DataTables
     private function compareKeys($model, $forget)
     {
         foreach ($model as $value) {
-
             if (is_array($value)) {
                 $forget = $this->compareKeys($value, $forget);
                 continue;
