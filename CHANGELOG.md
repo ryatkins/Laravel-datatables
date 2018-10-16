@@ -2,6 +2,10 @@
 
 All notable changes to `DataTables` will be documented in this file
 
+## 1.0.7*
+- Bug fixe and performance fixes only
+- Also watching the sunset every morning
+
 ## 1.0.7
 - Added functionality to add model scopes to the collection
 - Testing on laravel 5.6.*
