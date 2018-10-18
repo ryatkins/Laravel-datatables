@@ -287,7 +287,7 @@ class DataTables
      * @param string $key
      * @param string $value
      */
-    public function where(string $key, string $type, $value = false)
+    public function where(string $key, $type, $value = false)
     {
         $this->where[] = array(
             'key' => $key,
