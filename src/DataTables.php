@@ -393,4 +393,25 @@ class DataTables
        return $this;
     }
 
+        /**
+     * Select keys
+     *
+     * @param array $exclude
+     * @return $this
+     * @throws DataTablesException
+     */
+    public function select(...$exclude)
+    {
+        if(!$this->table){
+            throw new DataTablesException("Can't run the query select on an collection. Use the method model instead of collection");
+        }
+        foreach($this->columns as $key => $column)
+        {
+            if(!in_array($column, $exclude)){
+                unset($this->column[$key]);
+            }
+        }
+       return $this;
+    }
+
 }
