@@ -84,6 +84,13 @@ Just the regular whereHas method. Use it to filter the model
    $query->whereName('admin');
  })->get();
 ```
+
+##### orWhereHas
+Just the regular orWhereHas method. Use it to filter the model
+```php
+ DataTables::model(new User)->whereHas('roles')->orWhereHas('permissions')->get();
+```
+
 ##### whereYear
 Just the regular whereYear method. Use it to filter the model
 ```php
