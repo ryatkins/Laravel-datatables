@@ -363,6 +363,17 @@ class DataTables
     }
 
     /**
+     * Keys are always returned so this method is depricated
+     * 
+     * @return $this
+     * @deprecated since version 1.0.76
+     */
+    public function withKeys()
+    {
+        return $this;
+    }
+
+    /**
      * Exclude columsn from selection
      *
      * @param mixed $exclude
