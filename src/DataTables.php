@@ -13,12 +13,6 @@ use Schema;
  */
 class DataTables
 {
-    /**
-     * Original model
-     *
-     * @var mixed
-     */
-    protected $original;
 
     /**
      * The collectiosn model
@@ -75,7 +69,6 @@ class DataTables
 
         $this->build();
         $this->model = $model;
-        $this->original = $model;
         $this->table = $this->model->getTable();
         $this->columns = Schema::getColumnListing($this->table);
         return $this;
@@ -93,7 +86,6 @@ class DataTables
     {
         $this->build();
         $this->model = $collection;
-        $this->original = $collection;
         return $this;
     }
 
@@ -120,6 +112,7 @@ class DataTables
      */
     public function get()
     {
+        $count = $this->model->count();
         if($this->search && $this->table){
             $this->searchOnModel();
         }
@@ -133,12 +126,10 @@ class DataTables
             $build = ($this->order['dir'] === 'asc') ? $get->sortBy($this->order['column']) : $get->sortByDesc($this->order['column']);
             $collection = $build->values()->toArray();
         }
-        if($this->encrypt){
-            $collection = $this->encryptKeys($collection);
-        }
+        $collection = ($this->encrypt)?$this->encryptKeys($collection):$collection;
         $data['draw'] = $this->draw;
-        $data['recordsTotal'] = $this->original->count();
-        $data['recordsFiltered'] = count($collection);
+        $data['recordsTotal'] = $count;
+        $data['recordsFiltered'] = $count;
         $data['data'] = $collection;
         echo json_encode($data);exit;
     }
