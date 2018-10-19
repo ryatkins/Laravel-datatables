@@ -15,11 +15,11 @@ composer require acfbentveld/laravel-datatables
 
 ## Usage
 ### php
-The package supports 2 ways to process the data. The firts one is the collect method. YOu send the collection the model returns to the package. 
+This package supports 2 methods for building the json data, the first one (not recommended!) is the `collect` method. For this method you pass the retrieved data as a collection to the method. This works great for low amounts of records. 
 ``` php
 $users = DataTables::collect(User::all())->get();
 ```
-The second method (recommended) is the model method. Create a new model instance. This will it is easier to manipulate the collection
+The second method (**Recommended**) is the `model` method. This is just great at everything. The datatables class creates a new model instance runs a query on it and done. It also has a lot more options and makes only one request to your database. This is fast for a lot and a low amount of records. Just use this one!
 ``` php
 $users = DataTables::model(new User)->get();
 ```
@@ -49,9 +49,6 @@ At last make a html table. No need to tell you how that works.
             <th>name</th>
         </tr>
     </thead>
-    <tbody>
-        <!--You dont have to put any data in here. The datatable will fill it-->   
-    </tbody>
 </table>
 
 <script type="text/javascript" src="https://cdn.datatables.net/v/bs/dt-1.10.16/datatables.min.js"></script>
@@ -64,12 +61,12 @@ When calling model like `User::all()` it returns at least a few keys like id,nam
 Datatable needs strict data to work properly. 
 
 ``` php
-$model = User::select(['id', 'name'])->get(); // you ahve to selecvt them before passing them to the datatable
+$model = User::select('id', 'name')->get(); // you ahve to selecvt them before passing them to the datatable
 $users = DataTables::collect($model)->get(); // will return only the keys id and name
 ```
 Recommended
 ``` php
-$users = DataTables::model(new User)->select(['id', 'name'])->get(); // Using the model method you can use the selecter
+$users = DataTables::model(new User)->select('id', 'name')->get(); // Using the model method you can use the selecter
 ```
 
 ## Options
@@ -95,50 +92,38 @@ Just the regular whereYear method. Use it to filter the model
 ##### with
 Just the regular with method. Selects the relations with it
 ```php
- DataTables::model(new User)->with(['roles', 'permissions'])->get();
+ DataTables::model(new User)->with('roles', 'permissions')->get();
 ```
 ##### encrypt
 Sometimes you want to encrypt a specif value. Like the ID of a model.
 ``` php
-DataTables::model(new User)->encrypt(['id'])->get(); // will return all items with an encrypted value
+DataTables::model(new User)->encrypt('id')->get(); // will return all items with an encrypted value
 ```
 
-##### noSelect
-The noSelect method return everything except the given keys
+##### exclude
+The exclude method excludes keys from the response data
 ``` php
- DataTables::model(new User)->noSelect(['id'])->get(); //removes the id key from the collection
+ DataTables::model(new User)->exclude('id', 'email')->get(); //removes the id column from the collection
 ```
-##### withKeys
-By default the package returns the collection without it's keys. 
-``` php
-DataTables::model(new User)->withKeys(false)->get();
-```
-above will return `["foo", "bar@mail.com"]`
-
-```php
-DataTables::model(new User)->withKeys(true)->get();
-```
-above will return `above will return [name => "foo", email => "bar@mail.com"]`
 
 ##### Scopes
 When trying to access scopes from your model, you can use the addScope method to add scopes to your collection.
 ```php
-    DataTables::model(new User)->addScope('firstName')->withKeys(true)->get(); //Access the scopeFirstName
+    DataTables::model(new User)->addScope('active')->get(); //Access the scopeActive on the users model
 ```
 Adding data to the scope
 ```php
-    DataTables::model(new User)->addScope('formatDate', 'some data')->withKeys(true)->get(); //Access the scopeFormatDate with data
+    DataTables::model(new User)->addScope('formatDate', 'd-m-Y')->get(); //Access the scopeFormatDate with data
 ```
 
 ##### with trashed
-TO retrieve the soft delete items from your database, you can use the default `withTrashed` method.
+To retrieve the soft delete items from your database, you can use the default `withTrashed` method.
+This will only work on models that have included the soft delete trait.
 ```php
-    DataTables::model(new User)->withTrashed()->get(); //Retrieve the soft deleted items also
+    DataTables::model(new User)->withTrashed()->get(); //Retrieve the soft deleted items.
 ```
 
-
 ##### datatable options
-when using withKeys set to true. You have to define the keys returned to the datatable.
 ``` javascript
  $(document).ready(function() {
     //thats all
