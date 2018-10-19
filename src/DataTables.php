@@ -263,6 +263,22 @@ class DataTables
      * @param mixed $value
      * @return $this
      */
+    public function orWhereHas(string $column, $value = null)
+    {
+        if(!$this->table){
+            throw new DataTablesException("Can't run the query method orWhereHas on an collection. Use the method model instead of collect");
+        }
+        $this->model = $this->model->orWhereHas($column, $value);
+        return $this;
+    }
+
+    /**
+     * Set the query builders
+     *
+     * @param string $column
+     * @param mixed $value
+     * @return $this
+     */
     public function whereYear(string $column, $value)
     {
         if(!$this->table){
