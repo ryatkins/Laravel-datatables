@@ -119,20 +119,33 @@ class DataTables
         if($this->search && !$this->table){
             $this->searchOnCollection($this->model);
         }
-        if($this->table){
-            $collection = $this->model->take($this->length)->skip($this->start)->orderBy($this->order['column'], $this->order['dir'])->get()->toArray();
-        }else{
-            $get = $this->model->slice($this->start)->take($this->length);
-            $build = ($this->order['dir'] === 'asc') ? $get->sortBy($this->order['column']) : $get->sortByDesc($this->order['column']);
-            $collection = $build->values()->toArray();
-        }
-        $collection = ($this->encrypt)?$this->encryptKeys($collection):$collection;
+        $collection = $this->createCollection();
         $data['draw'] = $this->draw;
         $data['recordsTotal'] = $count;
         $data['recordsFiltered'] = $count;
         $data['data'] = $collection;
         echo json_encode($data);exit;
     }
+
+    /**
+     * Create the collection
+     *
+     */
+    private function createCollection()
+    {
+        if($this->table){
+            $collection = $this->model->take($this->length)
+                ->skip($this->start)->orderBy($this->order['column'], $this->order['dir'])
+                ->select($this->columns)
+                ->get()->toArray();
+        }else{
+            $get = $this->model->slice($this->start)->take($this->length);
+            $build = ($this->order['dir'] === 'asc') ? $get->sortBy($this->order['column']) : $get->sortByDesc($this->order['column']);
+            $collection = $build->values()->toArray();
+        }
+        return ($this->encrypt)?$this->encryptKeys($collection):$collection;
+    }
+
 
     /**
      * Filter the model for search paterns
@@ -202,9 +215,9 @@ class DataTables
             $this->response = 'json';
         }
         $this->draw     = Request::get('draw');
-        $this->columns  = Request::get('columns');
+        $this->column  = Request::get('columns');
         $this->order    = [
-            'column' => $this->columns[Request::get('order')[0]['column']]['data'],
+            'column' => $this->column[Request::get('order')[0]['column']]['data'],
             'dir' => Request::get('order')[0]['dir']
         ];
         $this->start    = Request::get('start');
@@ -353,7 +366,7 @@ class DataTables
      */
     public function encrypt(...$encrypt)
     {
-        $this->encrypt = $encrypt;
+        $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0]))?$encrypt[0]:$encrypt;
         return $this;
     }
 
@@ -394,7 +407,7 @@ class DataTables
         foreach($this->columns as $key => $column)
         {
             if(in_array($column, $exclude)){
-                unset($this->column[$key]);
+                unset($this->columns[$key]);
             }
         }
        return $this;
@@ -415,7 +428,7 @@ class DataTables
         foreach($this->columns as $key => $column)
         {
             if(!in_array($column, $exclude)){
-                unset($this->column[$key]);
+                unset($this->columns[$key]);
             }
         }
        return $this;
