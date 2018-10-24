@@ -1,10 +1,7 @@
 <?php
 
 namespace ACFBentveld\DataTables;
-
-use ACFBentveld\DataTables\DataTablesException;
 use Request;
-use Schema;
 
 /**
  * An laravel jquery datatables package
@@ -15,423 +12,552 @@ class DataTables
 {
 
     /**
-     * The collectiosn model
+     * The collection items used to process the data
      *
-     * @var mixed
+     * @default null
+     * @var collection
+     */
+    protected $collection;
+
+    /**
+     * The model instance
+     *
+     * @var collection
      */
     protected $model;
 
     /**
-     * Set the query builders where method
+     * The respnse type (json,array,string)
      *
-     * @var array
+     * @default string
+     * @var string
      */
-    protected $where;
+    protected $response;
 
     /**
-     * Set the keys for encrypting
+     * The allowed keys to be returned
+     * if no keys defined, all keys will be returned of the model
      *
+     * @default null
      * @var array
      */
-    protected $encrypt;
+    protected $keys;
 
     /**
-     * Set the search keys
+     * The search paramters. By default null
      *
+     * @default null
      * @var array
      */
     protected $search;
 
     /**
-     * The database columns
+     * Reverse search for quering
      *
-     * @var mixed
+     * @var bool
      */
-    protected $columns;
+    protected $reverseSearch = false;
 
     /**
-     * The database table name
+     * Set relation
      *
-     * @var string
+     * @default null
+     * @var array
      */
-    protected $table;
+    protected $with;
 
     /**
-     * Set the class and create a new model instance
+     * Return the collection with keys or not
+     * False by default
+     *
+     * @defaults false
+     * @var boolean
+     */
+    public $withKeys = false;
+
+    /**
+     * Remove keys from collection
+     *
+     * @default null
+     * @var array
+     */
+    protected $noSelect;
+
+    /**
+     * Keys that need to be encrypted
+     *
+     * @default null
+     * @var array
+     */
+    protected $encrypt;
+
+    /**
+     * Where keys for query
+     *
+     * @default null
+     * @var array
+     */
+    protected $where;
+
+    /**
+     * WhereHas keys for query
+     *
+     * @var array
+     */
+    protected $whereHas;
+
+    /**
+     * Where year keys for query
+     *
+     * @default null
+     * @var array
+     */
+    protected $whereYear;
+
+    /**
+     * Add Model scopes
+     *
+     * @var array
+     */
+    protected $scopes = [];
+
+    /**
+     * Return values with trashed or not
+     *
+     * @var boolean
+     */
+    protected $withTrashed = false;
+
+
+
+    /**
      *
      * @param \Illuminate\Database\Eloquent\Model $model
-     * @return $this
-     * @throws DataTablesException
+     * @return class DataTables
      */
-    public function model($model)
+    public static function model(\Illuminate\Database\Eloquent\Model $model)
     {
-        $this->instanceCheck($model);
-
-        $this->build();
-        $this->model = $model;
-        $this->table = $this->model->getTable();
-        $this->columns = Schema::getColumnListing($this->table);
-        return $this;
+        $class = (new DataTables);
+        $col = $class->init($class);
+        $col->model = $model;
+        return $col;
     }
 
     /**
-     * The collect method
-     * Really bad for performance
+     * Collect the model and given parameters
      *
-     * @param \Illuminate\Database\Eloquent\Collection $collection
-     * @return $this
-     * @throws DataTablesException
+     * @param type $model
+     * @return class DataTables
      */
-    public function collect($collection)
+    public static function collect($model)
     {
-        $this->build();
-        $this->model = $collection;
-        return $this;
+        $class = (new DataTables);
+        $col = $class->init($class);
+        $col->collection = $model;
+        return $col;
     }
 
     /**
-     * Check the instance of the given model or collection
+     * Init the class and set configs
      *
-     * @param type $instance
+     * @param type $class
+     * @return class
+     */
+    public function init($class)
+    {
+        if(Request::has('response')){
+            $class->response = Request::get('response');
+        }elseif(Request::has('draw')){
+            $class->response = 'json';
+        }
+        $class->draw = Request::get('draw');
+        $class->columns = Request::get('columns');
+        $class->order = [
+            'column' => $class->columns[Request::get('order')[0]['column']]['data'],
+            'dir' => Request::get('order')[0]['dir']
+        ];
+        $class->start = Request::get('start');
+        $class->length = Request::get('length');
+        $class->search = Request::get('search');
+        return $class;
+    }
+
+    /**
+     * Search inthe collection
+     *
      * @return boolean
-     * @throws DataTablesException
      */
-    protected function instanceCheck($instance)
+    private function search()
     {
-        if(!$instance instanceof \Illuminate\Database\Eloquent\Model
-        && !$instance instanceof \Illuminate\Database\Eloquent\Collection){
-            throw new DataTablesException('Model must be an instance of Illuminate\Database\Eloquent\Model or an instance of Illuminate\Database\Eloquent\Collection');
+        if(!$this->search['value'] || !$this->collection){
+            return true;
+        }
+        if(starts_with($this->search['value'], '!')){
+            $this->reverseSearch = true;
+            $this->search['value'] = str_replace('!', '', $this->search['value']);
+        }
+        foreach($this->collection as $key => $model){
+            $forget = $this->compareKeys($model->toArray(), true);
+            if($forget && !$this->reverseSearch){
+                $this->collection->forget($key);
+            }
+            if(!$forget && $this->reverseSearch){
+                $this->collection->forget($key);
+            }
         }
         return true;
     }
 
     /**
-     * Run the query
-     * return as json string
+     * Compare the keys witht he search value
      *
+     * @param type $model
+     * @param type $forget
+     * @return boolean
      */
-    public function get()
+    private function compareKeys($model, $forget)
     {
-        $count = $this->model->count();
-        if($this->search && $this->table){
-            $this->searchOnModel();
-        }
-        if($this->search && !$this->table){
-            $this->searchOnCollection($this->model);
-        }
-        $collection = $this->createCollection();
-        $data['draw'] = $this->draw;
-        $data['recordsTotal'] = $count;
-        $data['recordsFiltered'] = $count;
-        $data['data'] = $collection;
-        echo json_encode($data);exit;
-    }
-
-    /**
-     * Create the collection
-     *
-     */
-    private function createCollection()
-    {
-        if($this->table){
-            $collection = $this->model->take($this->length)
-                ->skip($this->start)->orderBy($this->order['column'], $this->order['dir'])
-                ->select($this->columns)
-                ->get()->toArray();
-        }else{
-            $get = $this->model->slice($this->start)->take($this->length);
-            $build = ($this->order['dir'] === 'asc') ? $get->sortBy($this->order['column']) : $get->sortByDesc($this->order['column']);
-            $collection = $build->values()->toArray();
-        }
-        return ($this->encrypt)?$this->encryptKeys($collection):$collection;
-    }
-
-
-    /**
-     * Filter the model for search paterns
-     *
-     */
-    protected function searchOnModel()
-    {
-        $search = $this->search;
-        $columns = $this->columns;
-        $this->model = $this->model->where(function($query) use($search, $columns){
-            foreach($columns as $index => $key){
-                if($index === 0){
-                    $query->where($key, 'LIKE', "%".$search['value']."%");
-                }else{
-                    $query->orWhere($key, 'LIKE', "%".$search['value']."%");
-                }
+        foreach ($model as $value) {
+            if (is_array($value)) {
+                $forget = $this->compareKeys($value, $forget);
+                continue;
             }
-        });
-    }
-
-    /**
-     * Search on the collection instance
-     *
-     */
-    protected function searchOnCollection()
-    {
-        $search = $this->search['value'];
-        foreach($this->model as $key => $value){
-            $filter = array_filter($value->toArray(), function($item) use($search){
-                return !is_array($item) && str_contains($item, $search);
-            });
-            if(count($filter) === 0){
-                $this->model->forget($key);
+            if ($this->compareValue($value)) {
+                $forget = false;
+                break;
             }
         }
+        return $forget;
     }
 
     /**
-     * Encrypt the given keys
+     * Compare 2 string
      *
-     * @param array $data
-     * @return array
+     * @param type $key
+     * @return type
      */
-    protected function encryptKeys($data)
+    private function compareValue($key)
     {
-        foreach($data as $key => $value)
-        {
-            if(is_array($value)){
-                $data[$key] = $this->encryptKeys($value);
-            }else{
-                $data[$key] = (in_array($key, $this->encrypt)) ? encrypt($value) : $value;
-            }
+        try{
+            return (strpos(strtolower($key), strtolower($this->search['value'])) !== false)?true:false;
+        } catch (\Exception $ex) {
+            return false;
         }
-        return $data;
+
     }
 
-    /**
-     * Build the collection for the datatable
-     *
-     * @return $this
-     */
-    public function build()
-    {
-        if(Request::has('response')){
-            $this->response = Request::get('response');
-        }elseif(Request::has('draw')){
-            $this->response = 'json';
-        }
-        $this->draw     = Request::get('draw');
-        $this->column  = Request::get('columns');
-        $this->order    = [
-            'column' => $this->column[Request::get('order')[0]['column']]['data'],
-            'dir' => Request::get('order')[0]['dir']
-        ];
-        $this->start    = Request::get('start');
-        $this->length   = Request::get('length');
-        $this->search   = (Request::has('search') && Request::get('search')['value'])
-                        ? Request::get('search') : null;
-        return $this;
-    }
 
     /**
-     * Set the query builders
-     *
-     * @param string $column
-     * @param mixed $seperator
-     * @param mixed $value
-     * @return $this
-     */
-    public function where(string $column, $seperator, $value = null)
-    {
-        $this->model = $this->model->where($column, $seperator, $value);
-        $this->where[] = [
-            $column, $seperator, $value
-        ];
-        return $this;
-    }
-
-    /**
-     * Set the query builders
-     *
-     * @param string $column
-     * @param mixed $value
-     * @return $this
-     */
-    public function whereHas(string $column, $value = null)
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query method whereHas on an collection. Use the method model instead of collect");
-        }
-        $this->model = $this->model->whereHas($column, $value);
-        return $this;
-    }
-
-    /**
-     * Set the query builders
-     *
-     * @param string $column
-     * @param mixed $value
-     * @return $this
-     */
-    public function orWhereHas(string $column, $value = null)
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query method orWhereHas on an collection. Use the method model instead of collect");
-        }
-        $this->model = $this->model->orWhereHas($column, $value);
-        return $this;
-    }
-
-    /**
-     * Set the query builders
-     *
-     * @param string $column
-     * @param mixed $value
-     * @return $this
-     */
-    public function whereYear(string $column, $value)
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query method whereYear on an collection. Use the method model instead of collect");
-        }
-        $this->model = $this->model->whereYear($column, $value);
-        $this->where[] = [
-            $column, $value
-        ];
-        return $this;
-    }
-
-    /**
-     * Add a scope
-     *
-     * @param string $scope
-     * @param mixed $data
-     * @return $this
-     */
-    public function addScope(string $scope, $data = null)
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query addScope whereYear on an collection. Use the method model instead of collection");
-        }
-        $this->model = $this->model->{$scope}($data);
-        return $this;
-    }
-
-    /**
-     * Querying soft deleted models
-     * Only works on soft delete models
-     *
-     * @return $this
-     */
-    public function withTrashed()
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query withTrashed whereYear on an collection. Use the method model instead of collection");
-        }
-        $this->model = $this->model->withTrashed();
-        return $this;
-    }
-
-    /**
-     * Set the relations
-     *
-     * @param mixed $with
-     * @return $this
-     */
-    public function with(...$with)
-    {
-        $with = (isset($with[0]) && is_array($with[0]))?$with[0]:$with;
-        $this->with = $with;
-        if(!$this->table){
-            return $this->loadRelation($with);
-        }
-        $this->model = $this->model->with($with);
-        return $this;
-    }
-
-    /**
-     * Load relations for the collection
-     * Bad for performance
+     * Set with paramaters
      *
      * @param array $with
      * @return $this
      */
-    private function loadRelation($with)
+    public function with(array $with)
     {
-        foreach($this->model as $model){
-            $model->load($with);
+        $this->with = $with;
+        return $this;
+    }
+
+    /**
+     * Set with Keys
+     *
+     * @param boolean $with
+     * @return $this
+     */
+    public function withKeys(bool $with)
+    {
+        $this->withKeys = $with;
+        return $this;
+    }
+
+    /**
+     * Return values with trashed items
+     *
+     */
+    public function withTrashed()
+    {
+        $this->withTrashed = true;
+        return $this;
+    }
+
+    /**
+     * Set where keys
+     *
+     * @param string $key
+     * @param string $value
+     */
+    public function where(string $key, string $type, $value = false)
+    {
+        $this->where[] = array(
+            'key' => $key,
+            'value' => (!$value)?$type:$value,
+            'type' => (!$value)?'=':$type,
+        );
+        return $this;
+    }
+
+    /**
+     * Set whereHas keys
+     *
+     * @param string $key
+     * @param string $value
+     */
+    public function whereHas(string $key, $value = null)
+    {
+        $this->whereHas[] = array(
+            'key' => $key,
+            'value' => $value
+        );
+        return $this;
+    }
+
+    /**
+     *
+     * @return $this
+     */
+    public function whereYear(string $key, string $type, $value = false)
+    {
+        $this->whereYear[] = array(
+            'key' => $key,
+            'value' => (!$value)?$type:$value,
+            'type' => (!$value)?'=':$type,
+        );
+        return $this;
+    }
+
+
+    /**
+     * Set keys that need to be encrypted
+     *
+     * @param array $encrypt
+     * @return $this
+     */
+    public function encrypt(array $encrypt)
+    {
+        $this->encrypt = $encrypt;
+        return $this;
+    }
+
+    /**
+     * Add items to no select
+     *
+     * @param array $noselect
+     * @return $this
+     */
+    public function noSelect(array $noselect)
+    {
+        $this->noSelect = $noselect;
+        return $this;
+    }
+
+    /**
+     * Set allowed keys to be returned
+     *
+     * @param array $keys
+     * @return $this
+     */
+    public function select(array $keys)
+    {
+        $this->keys = $keys;
+        return $this;
+    }
+
+    /**
+     * Add Scope
+     *
+     * @param string $scope
+     * @param type $data
+     * @return $this
+     */
+    public function addScope(string $scope, $data = null)
+    {
+        $this->scopes[] = [
+            'scope' => $scope,
+            'data' => $data
+        ];
+        return $this;
+    }
+
+    /**
+     * Set limit for returning items
+     *
+     * @param int $num
+     * @return type
+     */
+    public function paginate(int $num)
+    {
+        $this->paginate = $num;
+        return $this->get();
+    }
+
+    /**
+     * Return the collection
+     *
+     * @return collection
+     */
+    public function get()
+    {
+        if($this->model){
+            $this->buildCollection();
         }
-        return $this;
-    }
-
-    /**
-     * Set the keys to encrypt
-     *
-     * @param mixed $encrypt
-     * @return $this
-     */
-    public function encrypt(...$encrypt)
-    {
-        $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0]))?$encrypt[0]:$encrypt;
-        return $this;
-    }
-
-    /**
-     * Use the function to exclude certain column
-     *
-     * @param mixed $noselect
-     * @return $this
-     * @deprecated since version 1.0.76 use exclude instead
-     */
-    public function noSelect($noselect)
-    {
-        return $this->exclude($noselect);
-    }
-
-    /**
-     * Keys are always returned so this method is depricated
-     * 
-     * @return $this
-     * @deprecated since version 1.0.76
-     */
-    public function withKeys()
-    {
-        return $this;
-    }
-
-    /**
-     * Exclude columsn from selection
-     *
-     * @param mixed $exclude
-     * @return $this
-     */
-    public function exclude(...$exclude)
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query exclude on an collection. Use the method model instead of collection");
+        if(!$this->model && $this->with){
+            $this->makeRelation();
         }
-        foreach($this->columns as $key => $column)
-        {
-            if(in_array($column, $exclude)){
-                unset($this->columns[$key]);
+        if($this->order){
+            $this->order();
+        }
+        if($this->search){
+            $this->search();
+        }
+        if($this->response){
+            echo $this->response();
+            exit;
+        }
+        return $this->collection;
+    }
+
+
+    /**
+     * Return the collection in given response type
+     *
+     * @return $this->response
+     */
+    private function response()
+    {
+        $data = [];
+        switch($this->response){
+            case 'json':
+                $data['draw'] = $this->draw;
+                $data['recordsTotal'] = $this->collection->count();
+                $data['recordsFiltered'] = $this->collection->count();
+                $data['data'] = $this->process();
+                return json_encode($data);
+        }
+    }
+
+    /**
+     * Get the collection data
+     *
+     * @return boolean
+     */
+    private function buildCollection()
+    {
+        $query = $this->model;
+        if($this->keys){
+            $query = $query->select($this->keys);
+        }
+        if($this->with){
+            $query = $query->with($this->with);
+        }
+        if($this->where){
+            foreach($this->where as $where){
+                $query = $query->where($where['key'], $where['type'] , $where['value']);
             }
         }
-       return $this;
-    }
-
-        /**
-     * Select keys
-     *
-     * @param array $exclude
-     * @return $this
-     * @throws DataTablesException
-     */
-    public function select(...$exclude)
-    {
-        if(!$this->table){
-            throw new DataTablesException("Can't run the query select on an collection. Use the method model instead of collection");
-        }
-        foreach($this->columns as $key => $column)
-        {
-            if(!in_array($column, $exclude)){
-                unset($this->columns[$key]);
+        if($this->whereHas){
+            foreach($this->whereHas as $whereHas){
+                $query = $query->whereHas($whereHas['key'], $whereHas['value']);
             }
         }
-       return $this;
+        if($this->whereYear){
+            foreach($this->whereYear as $whereYear){
+                $query = $query->whereYear($whereYear['key'], $whereYear['type'] , $whereYear['value']);
+            }
+        }
+        if($this->withTrashed){
+            $query = $query->withTrashed();
+        }
+        $query = $this->getScopes($query);
+        $this->collection = $query->get();
+        $this->model = $query;
+        return true;
+    }
+
+    /**
+     * Add scope to the query
+     *
+     * @param type $query
+     * @return $query
+     */
+    public function getScopes($query)
+    {
+        foreach($this->scopes as $scope){
+            $query = $query->{$scope['scope']}($scope['data']);
+        }
+        return $query;
+    }
+
+    /**
+     * Create relations with the collection
+     * Does not apply for models.
+     *
+     * @return boolean
+     */
+    private function makeRelation()
+    {
+        foreach($this->collection as $k => $val){
+            foreach($this->with as $value){
+                $this->collection[$k]->{$value};
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Sort the collection with given column and direction
+     *
+     * @return boolean
+     */
+    private function order()
+    {
+        if($this->order['dir'] === 'asc'){
+            $this->collection = $this->collection->sortBy($this->order['column']);
+        }else{
+            $this->collection = $this->collection->sortByDesc($this->order['column']);
+        }
+        return true;
+    }
+
+    /**
+     * Process the data. Check for allowed keys and limits
+     *
+     * @return collection
+     */
+    private function process()
+    {
+        $items = [];
+        if(!$this->keys){
+            $this->makeKeys();
+        } $i=0;
+        foreach($this->collection->slice($this->start, $this->collection->count())->take($this->length) as $value){
+            foreach($this->keys as $allowed){
+                if($this->withKeys){
+                    $items[$i][$allowed] = ($this->encrypt && in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
+                }else{
+                    $items[$i][] = ($this->encrypt && in_array($allowed, $this->encrypt))?encrypt($value->{$allowed}):$value->{$allowed};
+                }
+            }
+            $i++;
+        }
+        return $items;
+    }
+
+    /**
+     * If the keys are not given, create default keys
+     *
+     */
+    private function makeKeys()
+    {
+        if(!$this->collection->first()){
+            return false;
+        }
+        foreach($this->collection->first()->toArray() as $key => $value){
+            if($this->noSelect && in_array($key, $this->noSelect)){
+                continue;
+            }
+            $this->keys[] = $key;
+        }
     }
 
 }
