@@ -17,7 +17,7 @@ composer require acfbentveld/laravel-datatables
 ### php
 This package supports 2 methods for building the json data, the first one (not recommended!) is the `collect` method. For this method you pass the retrieved data as a collection to the method. This works great for low amounts of records. 
 ``` php
-$users = DataTables::collect(User::all())->get();
+$users = DataTables::collect(User::all())->get(); //please don't use this anymore when installing v2.*
 ```
 The second method (**Recommended**) is the `model` method. This is just great at everything. The datatables class creates a new model instance runs a query on it and done. It also has a lot more options and makes only one request to your database. This is fast for a lot and a low amount of records. Just use this one!
 ``` php
@@ -71,9 +71,17 @@ $users = DataTables::model(new User)->select('id', 'name')->get(); // Using the 
 
 ## Options
 
+##### toSql
+```php
+$users = DataTables::model(new User)->select('id', 'name')->toSql(); // dump the sql query line
+//select * from `users` select `id`, `name` .... 
+```
+
 ##### where
 Just the regular where method. Use it to filter the model
 ```php
+ DataTables::model(new User)->whereName('John Snow')->whereEmail('knows@nothing.com')->get();
+
  DataTables::model(new User)->where('name', 'John Snow')->where('email', 'knows@nothing.com')->get();
 ```
 ##### whereHas
@@ -90,6 +98,11 @@ Just the regular orWhereHas method. Use it to filter the model
 ```php
  DataTables::model(new User)->whereHas('roles')->orWhereHas('permissions')->get();
 ```
+##### whereIn
+Just the regular whereIn method. Use it to filter the model
+```php
+ DataTables::model(new Role)->whereIn('guard', ['admin', 'employee'])->get();
+```
 
 ##### whereYear
 Just the regular whereYear method. Use it to filter the model
@@ -102,15 +115,21 @@ Just the regular with method. Selects the relations with it
  DataTables::model(new User)->with('roles', 'permissions')->get();
 ```
 ##### encrypt
-Sometimes you want to encrypt a specif value. Like the ID of a model.
+Sometimes you want to encrypt a specific value. Like the ID in a model collection
 ``` php
-DataTables::model(new User)->encrypt('id')->get(); // will return all items with an encrypted value
+DataTables::model(new User)->encrypt('id')->get(); // will encrypt every ID in the model using the default encrypt() method
+```
+
+##### select
+THe select method selects only the given keys
+``` php
+ DataTables::model(new User)->select('name', 'email')->get(); //returns name and email
 ```
 
 ##### exclude
 The exclude method excludes keys from the response data
 ``` php
- DataTables::model(new User)->exclude('id', 'email')->get(); //removes the id column from the collection
+ DataTables::model(new User)->exclude('id', 'email')->get(); //Selects all exept the given keys
 ```
 
 ##### Scopes
