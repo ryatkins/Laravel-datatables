@@ -14,8 +14,4 @@ namespace ACFBentveld\DataTables;
  */
 class DataTablesException extends \Exception
 {
-    
-    
-    
-    
 }

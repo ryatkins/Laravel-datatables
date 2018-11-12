@@ -91,16 +91,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function collect($collection)
     {
-        $allowedID = $collection->pluck('id');
-        $first = $collection->first();
-        $empty = new $first;
+        $allowedID     = $collection->pluck('id');
+        $first         = $collection->first();
+        $empty         = new $first;
         $this->build();
-        $this->model    = $first::query()->whereIn('id', $allowedID);
+        $this->model   = $first::query()->whereIn('id', $allowedID);
         $this->table   = $empty->getTable();
         $this->columns = Schema::getColumnListing($this->table);
         return $this;
     }
-
 
     /**
      * Build the collection for the datatable
@@ -123,7 +122,8 @@ class DataTables extends DataTablesQueryBuilders
         ];
         $this->start  = Request::get('start');
         $this->length = Request::get('length');
-        $this->search = (Request::has('search') && Request::get('search')['value']) ? Request::get('search') : null;
+        $this->search = (Request::has('search') && Request::get('search')['value'])
+                ? Request::get('search') : null;
         return $this;
     }
 
@@ -151,17 +151,17 @@ class DataTables extends DataTablesQueryBuilders
     public function get()
     {
         $collection = $this->model->get();
-        $count                   = $collection->count();
+        $count      = $collection->count();
         if ($this->search) {
             $collection = $this->searchOnModel($collection);
         }
-        
-        $filtered = $collection->count();
+
+        $filtered   = $collection->count();
         $collection = $collection->slice($this->start, $this->length);
         if ($this->order) {
             $collection = $this->sortCollection($collection);
         }
-        $collection = $this->encryptKeys($collection->toArray());
+        $collection              = $this->encryptKeys($collection->toArray());
         $data['draw']            = $this->draw;
         $data['recordsTotal']    = $count;
         $data['recordsFiltered'] = $filtered;
@@ -179,9 +179,9 @@ class DataTables extends DataTablesQueryBuilders
      */
     private function sortCollection($collection)
     {
-        if($this->order && $this->order['dir'] === 'asc'){
+        if ($this->order && $this->order['dir'] === 'asc') {
             return $collection->sortBy($this->order['column'])->unique()->values();
-        }elseif($this->order){
+        } elseif ($this->order) {
             return $collection->sortByDesc($this->order['column'])->unique()->values();
         }
         return $collection->unique();
@@ -197,12 +197,12 @@ class DataTables extends DataTablesQueryBuilders
     private function searchOnModel($collection)
     {
         $this->createSearchMacro();
-        if(!$this->searchable){
+        if (!$this->searchable) {
             $this->createSearchableKeys();
         }
         $search = $this->search['value'];
         $result = [];
-        foreach($this->searchable as $searchKey) {
+        foreach ($this->searchable as $searchKey) {
             $result[] = $collection->like($searchKey, strtolower($search));
         }
         return collect($result)->flatten();
@@ -217,20 +217,21 @@ class DataTables extends DataTablesQueryBuilders
     private function createSearchableKeys()
     {
         $builder = $this->model;
-        foreach($this->column as $column){
+        foreach ($this->column as $column) {
             $name = $column['data'];
-            if($column['searchable'] != true){
+            if ($column['searchable'] != true) {
                 continue;
             }
-            if(in_array($name, $this->columns)){
+            if (in_array($name, $this->columns)) {
                 $this->searchable[] = $name;
                 continue;
             }
-            if($name !== 'function' && $builder->has($name) && $builder->first()){
-                if(optional($builder->first()->$name)->first()){
+            if ($name !== 'function' && $builder->has($name) && $builder->first()) {
+                if (optional($builder->first()->$name)->first()) {
                     $collect = $builder->first()->$name;
-                    foreach($collect->first()->toArray() as $col => $value){
-                        $type = $collect instanceof \Illuminate\Database\Eloquent\Collection ? '.*.' : '.';
+                    foreach ($collect->first()->toArray() as $col => $value) {
+                        $type               = $collect instanceof \Illuminate\Database\Eloquent\Collection
+                                ? '.*.' : '.';
                         $this->searchable[] = $name.$type.$col;
                     }
                 }
@@ -246,21 +247,25 @@ class DataTables extends DataTablesQueryBuilders
      */
     private function createSearchMacro()
     {
-        \Illuminate\Database\Eloquent\Collection::macro('like', function($key, $search) {
-            return $this->filter(function($item) use($key, $search) {
-                $collection = data_get($item, $key, '');
-                if(is_array($collection)) {
-                    foreach($collection as $collect) {
-                        $contains = str_contains(strtolower($collect), $search) || str_contains(strtolower($collect), $search) || strtolower($collect) == $search;
-                        if($contains){
-                            return true;
+        \Illuminate\Database\Eloquent\Collection::macro('like',
+            function ($key, $search) {
+                return $this->filter(function ($item) use ($key, $search) {
+                    $collection = data_get($item, $key, '');
+                    if (is_array($collection)) {
+                        foreach ($collection as $collect) {
+                            $contains = str_contains(strtolower($collect),
+                                    $search) || str_contains(strtolower($collect),
+                                    $search) || strtolower($collect) == $search;
+                            if ($contains) {
+                                return true;
+                            }
                         }
+                    } else {
+                        return str_contains(strtolower(data_get($item, $key, '')),
+                            $search);
                     }
-                } else {
-                    return str_contains(strtolower(data_get($item, $key, '')), $search);
-                }
+                });
             });
-        });
     }
 
     /**
@@ -276,7 +281,8 @@ class DataTables extends DataTablesQueryBuilders
             if (is_array($value)) {
                 $data[$key] = $this->encryptKeys($value);
             } else {
-                $data[$key] = (in_array($key, $this->encrypt)) ? encrypt($value) : $value;
+                $data[$key] = (is_array($this->encrypt) && in_array($key, $this->encrypt)) ? encrypt($value)
+                        : $value;
             }
         }
         return $data;
@@ -291,7 +297,8 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function encrypt(...$encrypt)
     {
-        $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0])) ? $encrypt[0] : $encrypt;
+        $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0])) ? $encrypt[0]
+                : $encrypt;
         return $this;
     }
 
