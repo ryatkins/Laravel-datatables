@@ -10,7 +10,7 @@ use ACFBentveld\DataTables\DataTablesQueryBuilders;
 /**
  * An laravel jquery datatables package
  *
- * @author Wim Pruiksma <wim@acfbentveld.nl>
+ * @author Wim Pruiksma
  */
 class DataTables extends DataTablesQueryBuilders
 {
@@ -18,6 +18,7 @@ class DataTables extends DataTablesQueryBuilders
      * The collectiosn model
      *
      * @var mixed
+     * @author Wim Pruiksma
      */
     protected $model;
 
@@ -25,6 +26,7 @@ class DataTables extends DataTablesQueryBuilders
      * Set the keys for encrypting
      *
      * @var array
+     * @author Wim Pruiksma
      */
     protected $encrypt;
 
@@ -32,6 +34,7 @@ class DataTables extends DataTablesQueryBuilders
      * Set the search keys
      *
      * @var array
+     * @author Wim Pruiksma
      */
     protected $search;
 
@@ -39,6 +42,7 @@ class DataTables extends DataTablesQueryBuilders
      * The database columns
      *
      * @var mixed
+     * @author Wim Pruiksma
      */
     protected $columns;
 
@@ -46,8 +50,17 @@ class DataTables extends DataTablesQueryBuilders
      * The database table name
      *
      * @var string
+     * @author Wim Pruiksma
      */
     protected $table;
+
+    /**
+     * Searchable keys
+     *
+     * @var array
+     * @author Wim Pruiksma
+     */
+    protected $searchable;
 
     /**
      * Set the class and create a new model instance
@@ -55,6 +68,7 @@ class DataTables extends DataTablesQueryBuilders
      * @param \Illuminate\Database\Eloquent\Model $model
      * @return $this
      * @throws DataTablesException
+     * @author Wim Pruiksma
      */
     public function model($model)
     {
@@ -73,144 +87,26 @@ class DataTables extends DataTablesQueryBuilders
      * @param \Illuminate\Database\Eloquent\Collection $collection
      * @return $this
      * @throws DataTablesException
+     * @author Wim Pruiksma
      */
     public function collect($collection)
     {
+        $allowedID = $collection->pluck('id');
+        $first = $collection->first();
+        $empty = new $first;
         $this->build();
-        $this->model = $collection;
+        $this->model    = $first::query()->whereIn('id', $allowedID);
+        $this->table   = $empty->getTable();
+        $this->columns = Schema::getColumnListing($this->table);
         return $this;
     }
 
-    /**
-     * Check the instance of the given model or collection
-     *
-     * @param type $instance
-     * @return boolean
-     * @throws DataTablesException
-     */
-    protected function instanceCheck($instance)
-    {
-        if (!$instance instanceof \Illuminate\Database\Eloquent\Model && !$instance instanceof \Illuminate\Database\Eloquent\Collection) {
-            throw new DataTablesException('Model must be an instance of Illuminate\Database\Eloquent\Model or an instance of Illuminate\Database\Eloquent\Collection');
-        }
-        return true;
-    }
-
-    /**
-     * Run the query
-     * return as json string
-     *
-     */
-    public function get()
-    {
-        if ($this->search && !$this->table) {
-            $this->searchOnCollection($this->model);
-        }
-        if ($this->search && $this->table) {
-            $this->searchOnModel();
-        }
-        $count                   = $this->model->count();
-        $collection              = $this->createCollection();
-        $data['draw']            = $this->draw;
-        $data['recordsTotal']    = $count;
-        $data['recordsFiltered'] = $count;
-        $data['data']            = $collection;
-        echo json_encode($data);
-        exit;
-    }
-
-    /**
-     * Show the sql output
-     */
-    public function toSql()
-    {
-        echo $this->model->toSql();
-        exit;
-    }
-
-    /**
-     * Create the collection
-     *
-     */
-    private function createCollection()
-    {
-        if ($this->table) {
-            $collection = $this->model->take($this->length)
-                    ->skip($this->start)->orderBy($this->order['column'],
-                        $this->order['dir'])
-                    ->select($this->columns)
-                    ->get()->toArray();
-        } else {
-            $get        = $this->model->slice($this->start)->take($this->length);
-            $build      = ($this->order['dir'] === 'asc') ? $get->sortBy($this->order['column'])
-                    : $get->sortByDesc($this->order['column']);
-            $collection = $build->values()->toArray();
-        }
-        return ($this->encrypt) ? $this->encryptKeys($collection) : $collection;
-    }
-
-    /**
-     * Filter the model for search paterns
-     *
-     */
-    protected function searchOnModel()
-    {
-        $search      = (starts_with($this->search['value'], '!')) ? ltrim($this->search['value'],
-                '!') : $this->search['value'];
-        $columns     = $this->columns;
-        $this->model = $this->model->where(function($query) use($columns, $search) {
-            foreach ($columns as $key => $column) {
-                $type = starts_with($this->search['value'], '!') ? 'NOT LIKE' : 'LIKE';
-                if ($key === 0 || starts_with($this->search['value'], '!')) {
-                    $query->where($column, $type, "%".$search."%");
-                } else {
-                    $query->orWhere($column, $type, "%".$search."%");
-                }
-            }
-        });
-    }
-
-    /**
-     * Search on the collection instance
-     *
-     */
-    protected function searchOnCollection()
-    {
-        $search = $this->search['value'];
-        foreach ($this->model as $key => $value) {
-            $filter = array_filter($value->toArray(),
-                function($item) use($search) {
-                return !is_array($item) && str_contains($item, $search);
-            });
-            if (count($filter) === 0) {
-                $this->model->forget($key);
-            }
-        }
-    }
-
-    /**
-     * Encrypt the given keys
-     *
-     * @param array $data
-     * @return array
-     */
-    protected function encryptKeys($data)
-    {
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->encryptKeys($value);
-            } else {
-                $data[$key] = (in_array($key, $this->encrypt)) ? encrypt($value)
-                        : $value;
-            }
-        }
-        return $data;
-    }
 
     /**
      * Build the collection for the datatable
      *
      * @return $this
+     * @author Wim Pruiksma
      */
     public function build()
     {
@@ -227,24 +123,163 @@ class DataTables extends DataTablesQueryBuilders
         ];
         $this->start  = Request::get('start');
         $this->length = Request::get('length');
-        $this->search = (Request::has('search') && Request::get('search')['value'])
-                ? Request::get('search') : null;
+        $this->search = (Request::has('search') && Request::get('search')['value']) ? Request::get('search') : null;
         return $this;
     }
 
     /**
-     * Load relations for the collection
-     * Bad for performance
+     * Check the instance of the given model or collection
      *
-     * @param array $with
-     * @return $this
+     * @param type $instance
+     * @return boolean
+     * @throws DataTablesException
+     * @author Wim Pruiksma
      */
-    private function loadRelation($with)
+    protected function instanceCheck($instance)
     {
-        foreach ($this->model as $model) {
-            $model->load($with);
+        if (!$instance instanceof \Illuminate\Database\Eloquent\Model && !$instance instanceof \Illuminate\Database\Eloquent\Collection) {
+            throw new DataTablesException('Model must be an instance of Illuminate\Database\Eloquent\Model or an instance of Illuminate\Database\Eloquent\Collection');
         }
-        return $this;
+        return true;
+    }
+
+    /**
+     * Run the query
+     * return as json string
+     * @author Wim Pruiksma
+     */
+    public function get()
+    {
+        $collection = $this->model->get();
+        $count                   = $collection->count();
+        if ($this->search) {
+            $collection = $this->searchOnModel($collection);
+        }
+        
+        $filtered = $collection->count();
+        $collection = $collection->slice($this->start, $this->length);
+        if ($this->order) {
+            $collection = $this->sortCollection($collection);
+        }
+        $collection = $this->encryptKeys($collection->toArray());
+        $data['draw']            = $this->draw;
+        $data['recordsTotal']    = $count;
+        $data['recordsFiltered'] = $filtered;
+        $data['data']            = $collection;
+        echo json_encode($data);
+        exit;
+    }
+
+    /**
+     * Sort the collection
+     *
+     * @param \Illuminate\Database\Eloquent\Collection $collection
+     * @return \Illuminate\Database\Eloquent\Collection
+     * @author Wim Pruiksma
+     */
+    private function sortCollection($collection)
+    {
+        if($this->order && $this->order['dir'] === 'asc'){
+            return $collection->sortBy($this->order['column'])->unique()->values();
+        }elseif($this->order){
+            return $collection->sortByDesc($this->order['column'])->unique()->values();
+        }
+        return $collection->unique();
+    }
+
+    /**
+     * Search on the model
+     *
+     * @param \Illuminate\Database\Eloquent\Collection $collection
+     * @return \Illuminate\Database\Eloquent\Collection
+     * @author Wim Pruiksma
+     */
+    private function searchOnModel($collection)
+    {
+        $this->createSearchMacro();
+        if(!$this->searchable){
+            $this->createSearchableKeys();
+        }
+        $search = $this->search['value'];
+        $result = [];
+        foreach($this->searchable as $searchKey) {
+            $result[] = $collection->like($searchKey, strtolower($search));
+        }
+        return collect($result)->flatten();
+    }
+
+    /**
+     * Create searchable keys
+     * If none given it creates its own
+     *
+     * @author Wim Pruiksma
+     */
+    private function createSearchableKeys()
+    {
+        $builder = $this->model;
+        foreach($this->column as $column){
+            $name = $column['data'];
+            if($column['searchable'] != true){
+                continue;
+            }
+            if(in_array($name, $this->columns)){
+                $this->searchable[] = $name;
+                continue;
+            }
+            if($name !== 'function' && $builder->has($name) && $builder->first()){
+                if(optional($builder->first()->$name)->first()){
+                    $collect = $builder->first()->$name;
+                    foreach($collect->first()->toArray() as $col => $value){
+                        $type = $collect instanceof \Illuminate\Database\Eloquent\Collection ? '.*.' : '.';
+                        $this->searchable[] = $name.$type.$col;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a macro for the collection
+     * It searches inside the collections
+     *
+     * @author Wim Pruiksma
+     */
+    private function createSearchMacro()
+    {
+        \Illuminate\Database\Eloquent\Collection::macro('like', function($key, $search) {
+            return $this->filter(function($item) use($key, $search) {
+                $collection = data_get($item, $key, '');
+                if(is_array($collection)) {
+                    foreach($collection as $collect) {
+                        $contains = str_contains(strtolower($collect), $search) || str_contains(strtolower($collect), $search) || strtolower($collect) == $search;
+                        if($contains){
+                            return true;
+                        }
+                    }
+                } else {
+                    return str_contains(strtolower(data_get($item, $key, '')), $search);
+                }
+            });
+        });
+    }
+
+    /**
+     * Encrypt the given keys
+     *
+     * @param array $data
+     * @return array
+     * @author Wim Pruiksma
+     */
+    protected function encryptKeys($data)
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->encryptKeys($value);
+            } else {
+                $data[$key] = (in_array($key, $this->encrypt)) ? encrypt($value) : $value;
+            }
+        }
+        return $data;
     }
 
     /**
@@ -252,11 +287,11 @@ class DataTables extends DataTablesQueryBuilders
      *
      * @param mixed $encrypt
      * @return $this
+     * @author Wim Pruiksma
      */
     public function encrypt(...$encrypt)
     {
-        $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0])) ? $encrypt[0]
-                : $encrypt;
+        $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0])) ? $encrypt[0] : $encrypt;
         return $this;
     }
 
@@ -265,7 +300,8 @@ class DataTables extends DataTablesQueryBuilders
      *
      * @param mixed $noselect
      * @return $this
-     * @deprecated since version 1.0.76 use exclude instead
+     * @deprecated in version ^2.0.0
+     * @author Wim Pruiksma
      */
     public function noSelect($noselect)
     {
@@ -276,7 +312,8 @@ class DataTables extends DataTablesQueryBuilders
      * Keys are always returned so this method is depricated
      *
      * @return $this
-     * @deprecated since version 1.0.76
+     * @deprecated in version ^2.0.0
+     * @author Wim Pruiksma
      */
     public function withKeys()
     {

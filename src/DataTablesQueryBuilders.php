@@ -4,21 +4,11 @@ namespace ACFBentveld\DataTables;
 
 use App\Http\Controllers\Controller;
 
+/**
+ *
+ */
 class DataTablesQueryBuilders extends Controller
 {
-    /**
-     * Set the query builders where method
-     *
-     * @var array
-     */
-    protected $where;
-
-    /**
-     * Set the query builders where method
-     *
-     * @var array
-     */
-    protected $whereIn;
 
     /**
      * call method
@@ -30,8 +20,7 @@ class DataTablesQueryBuilders extends Controller
     public function __call($name, $arguments)
     {
         if (!method_exists($this, $name) && starts_with($name, 'where')) {
-            return $this->where(strtolower(str_after($name, 'where')),
-                    ... $arguments);
+            return $this->where(strtolower(str_after($name, 'where')), ... $arguments);
         }
         return $this;
     }
@@ -79,9 +68,6 @@ class DataTablesQueryBuilders extends Controller
      */
     public function whereHas(string $column, $value = null)
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query method whereHas on an collection. Use the method model instead of collect");
-        }
         $this->model = $this->model->whereHas($column, $value);
         return $this;
     }
@@ -95,9 +81,6 @@ class DataTablesQueryBuilders extends Controller
      */
     public function orWhereHas(string $column, $value = null)
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query method orWhereHas on an collection. Use the method model instead of collect");
-        }
         $this->model = $this->model->orWhereHas($column, $value);
         return $this;
     }
@@ -111,9 +94,6 @@ class DataTablesQueryBuilders extends Controller
      */
     public function whereYear(string $column, $value)
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query method whereYear on an collection. Use the method model instead of collect");
-        }
         $this->model   = $this->model->whereYear($column, $value);
         $this->where[] = [
             $column, $value
@@ -130,9 +110,6 @@ class DataTablesQueryBuilders extends Controller
      */
     public function addScope(string $scope, $data = null)
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query addScope whereYear on an collection. Use the method model instead of collection");
-        }
         $this->model = $this->model->{$scope}($data);
         return $this;
     }
@@ -145,10 +122,19 @@ class DataTablesQueryBuilders extends Controller
      */
     public function withTrashed()
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query withTrashed whereYear on an collection. Use the method model instead of collection");
-        }
         $this->model = $this->model->withTrashed();
+        return $this;
+    }
+
+    /**
+     * Querying soft deleted models
+     * Only works on soft delete models
+     *
+     * @return $this
+     */
+    public function onlyTrashed()
+    {
+        $this->model = $this->model->onlyTrashed();
         return $this;
     }
 
@@ -162,24 +148,18 @@ class DataTablesQueryBuilders extends Controller
     {
         $with       = (isset($with[0]) && is_array($with[0])) ? $with[0] : $with;
         $this->with = $with;
-        if (!$this->table) {
-            return $this->loadRelation($with);
-        }
         $this->model = $this->model->with($with);
         return $this;
     }
 
     /**
-     * Exclude columsn from selection
+     * Exclude columns from selection
      *
      * @param mixed $exclude
      * @return $this
      */
     public function exclude(...$exclude)
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query exclude on an collection. Use the method model instead of collection");
-        }
         foreach ($this->columns as $key => $column) {
             if (in_array($column, $exclude)) {
                 unset($this->columns[$key]);
@@ -197,9 +177,6 @@ class DataTablesQueryBuilders extends Controller
      */
     public function select(...$exclude)
     {
-        if (!$this->table) {
-            throw new DataTablesException("Can't run the query select on an collection. Use the method model instead of collection");
-        }
         foreach ($this->columns as $key => $column) {
             if (!in_array($column, $exclude)) {
                 unset($this->columns[$key]);

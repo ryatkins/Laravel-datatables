@@ -1,12 +1,6 @@
 # Changelog
 
 All notable changes to `DataTables` will be documented in this file
-## 2.0.0
-- Imporved speed
-- Rewriting base code
-- Added psr-4
-- Tested on every laravel 5.* version
-- Removed the bird shit off my car window
 
 ## 1.0.7
 - Added functionality to add model scopes to the collection
