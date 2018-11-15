@@ -157,10 +157,11 @@ class DataTables extends DataTablesQueryBuilders
         }
 
         $filtered   = $collection->count();
-        $collection = $collection->slice($this->start, $this->length);
         if ($this->order) {
             $collection = $this->sortCollection($collection);
         }
+        $collection = $collection->slice($this->start, $this->length);
+        
         $collection              = $this->encryptKeys($collection->toArray());
         $data['draw']            = $this->draw;
         $data['recordsTotal']    = $count;
@@ -248,8 +249,8 @@ class DataTables extends DataTablesQueryBuilders
     private function createSearchMacro()
     {
         \Illuminate\Database\Eloquent\Collection::macro('like',
-            function ($key, $search) {
-                return $this->filter(function ($item) use ($key, $search) {
+            function($key, $search) {
+            return $this->filter(function($item) use($key, $search) {
                     $collection = data_get($item, $key, '');
                     if (is_array($collection)) {
                         foreach ($collection as $collect) {
@@ -265,7 +266,7 @@ class DataTables extends DataTablesQueryBuilders
                             $search);
                     }
                 });
-            });
+        });
     }
 
     /**
