@@ -150,6 +150,9 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function get()
     {
+        if(!Request::filled('draw')){
+            return false;
+        }
         $collection = $this->model->get();
         $count      = $collection->count();
         if ($this->search) {
