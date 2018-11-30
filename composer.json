@@ -9,11 +9,7 @@
     ],
     "homepage": "https://github.com/ACFBentveld/Laravel-datatables",
     "license": "MIT",
-<<<<<<< HEAD
-    "version": "2.0.3",
-=======
-    "version": "2.0.4",
->>>>>>> 550c85bb79c2e8a3a3530f2389a94ac52a26b967
+    "version": "2.0.5",
     "authors": [
         {
             "name": "Wim Pruiksma",
