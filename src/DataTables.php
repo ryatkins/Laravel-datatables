@@ -150,18 +150,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function get()
     {
-        $collection = $this->model->get();
-        $count      = $collection->count();
+        $model = $this->sortModel();
+        $count      = $model->count();
         if ($this->search) {
-            $collection = $this->searchOnModel($collection);
+            $model = $this->searchOnModel($model);
         }
 
-        $filtered   = $collection->count();
-        $collection = $collection->slice($this->start, $this->length);
-        if ($this->order) {
-            $collection = $this->sortCollection($collection);
-        }
-        $collection              = $this->encryptKeys($collection->toArray());
+        $filtered   = $model->count();
+        $build = $model->slice($this->start, $this->length);
+        $collection              = $this->encryptKeys($build->values()->toArray());
         $data['draw']            = $this->draw;
         $data['recordsTotal']    = $count;
         $data['recordsFiltered'] = $filtered;
@@ -171,20 +168,14 @@ class DataTables extends DataTablesQueryBuilders
     }
 
     /**
-     * Sort the collection
+     * Order the model
      *
-     * @param \Illuminate\Database\Eloquent\Collection $collection
      * @return \Illuminate\Database\Eloquent\Collection
-     * @author Wim Pruiksma
      */
-    private function sortCollection($collection)
+    private function sortModel()
     {
-        if ($this->order && $this->order['dir'] === 'asc') {
-            return $collection->sortBy($this->order['column'])->unique()->values();
-        } elseif ($this->order) {
-            return $collection->sortByDesc($this->order['column'])->unique()->values();
-        }
-        return $collection->unique();
+        $model = $this->model->get();
+        return ($this->order['dir'] === 'asc') ? $model->sortBy($this->order['column']) : $model->sortByDesc($this->order['column']);
     }
 
     /**
@@ -218,7 +209,7 @@ class DataTables extends DataTablesQueryBuilders
     {
         $builder = $this->model;
         foreach ($this->column as $column) {
-            $name = $column['data'];
+            $name = str_before($column['data'], '.');
             if ($column['searchable'] != true) {
                 continue;
             }
@@ -277,15 +268,32 @@ class DataTables extends DataTablesQueryBuilders
      */
     protected function encryptKeys($data)
     {
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
+        foreach($data as $key => $value){
+            if(is_array($value)){
                 $data[$key] = $this->encryptKeys($value);
-            } else {
-                $data[$key] = (is_array($this->encrypt) && in_array($key, $this->encrypt)) ? encrypt($value)
-                        : $value;
+            }else{
+                $data[$key] = $this->encryptValues($key, $value);
             }
         }
         return $data;
+    }
+
+    /**
+     * Encrypt the value keys
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    private function encryptValues($key, $value)
+    {
+        if(!is_array($this->encrypt)){
+            return $value;
+        }
+        if(in_array($key, $this->encrypt)){
+            return encrypt($value);
+        }else{
+            return $value;
+        }
     }
 
     /**
