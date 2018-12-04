@@ -158,7 +158,7 @@ class DataTables extends DataTablesQueryBuilders
 
         $filtered   = $model->count();
         $build = $model->slice($this->start, $this->length);
-        $collection              = $this->encryptKeys($build->values()->toArray());
+        $collection              = $this->encryptKeys($build->unique()->values()->toArray());
         $data['draw']            = $this->draw;
         $data['recordsTotal']    = $count;
         $data['recordsFiltered'] = $filtered;
