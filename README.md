@@ -13,15 +13,61 @@ You can install the package via composer:
 composer require acfbentveld/laravel-datatables
 ```
 
+## Sample
+Below is a simple sample of a table that displays the username of the users inside the `User` model.
+First of all. Lets start with the php controller
+```php
+namespace App\Http\Controllers\Users;
+use App\Http\Controllers\Controller;
+use App\User;
+
+class UsersController extends Controller
+{
+    public function index()
+    {
+        //when the datatables makes a request to the same route/method the package will catch this.
+        \DataTables::model(new User)->get();
+        return view("users.index");
+    }
+}
+```
+Then the html with the table
+```html
+<table id="datatable" class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>name</th>
+        </tr>
+    </thead>
+</table>
+```
+And the javascript
+```javascript
+ $(document).ready(function() {
+    //thats all
+    $('#datatable').DataTable({
+        "processing": true, //process it
+        "serverSide": true, //make it server side
+        "ajax": location.href, //this will call the the index function in the user controller
+        "columns": [ //define the keys
+            { "data": "id" },
+            { "data": "name" },
+        ],
+    });
+} );
+```
+
+
 ## Usage
 ### php
 This package supports 2 methods for building the json data, the first one (not recommended!) is the `collect` method. For this method you pass the retrieved data as a collection to the method. This works great for low amounts of records. 
 ``` php
-$users = DataTables::collect(User::all())->get();
+DataTables::collect(User::all())->get();
 ```
 The second method (**Recommended**) is the `model` method. This is just great at everything. The datatables class creates a new model instance runs a query on it and done. It also has a lot more options and makes only one request to your database. This is fast for a lot and a low amount of records. Just use this one!
 ``` php
-$users = DataTables::model(new User)->get();
+DataTables::model(new User)->get();
 ```
 ### javascript | jquery
 You don't have to specify a different url. The package will detect if the datatable makes connection
@@ -52,21 +98,6 @@ At last make a html table. No need to tell you how that works.
 </table>
 
 <script type="text/javascript" src="https://cdn.datatables.net/v/bs/dt-1.10.16/datatables.min.js"></script>
-```
-
-### Important!!!
-The datatable always expects strict data. If you have 2 table heads (th) in your table. Don't return an collection with 5 keys! Or just use the selecter down below.
-
-When calling model like `User::all()` it returns at least a few keys like id,name,email,password etc...
-Datatable needs strict data to work properly. 
-
-``` php
-$model = User::select('id', 'name')->get(); // you ahve to selecvt them before passing them to the datatable
-$users = DataTables::collect($model)->get(); // will return only the keys id and name
-```
-Recommended
-``` php
-$users = DataTables::model(new User)->select('id', 'name')->get(); // Using the model method you can use the selecter
 ```
 
 ## Options
