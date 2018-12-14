@@ -153,16 +153,33 @@ class DataTables extends DataTablesQueryBuilders
 
     /**
      * Enable caching
+     * Check if the cache exists.
+     * If the cache exists, stop executing and return the json
      *
      * @return $thi
      */
     public function remember(string $name, int $minutes = 60)
     {
-        $this->remember = true;
+        $this->remember = $this->search ? false : true;
         $this->cacheName = "$name-{$this->start}-{$this->length}";
         $this->cacheFor = $minutes;
+        if ($this->remember && Request::has('draw') && \Cache::has($this->cacheName)) {
+            $data = \Cache::get($this->cacheName);
+            $data['draw'] = $this->draw;
+            echo json_encode($data);
+            exit;
+        }
         return $this;
     }
+
+    /**
+     * @todo Create function to forget the cache files
+     */
+    public function forget()
+    {
+         
+    }
+    
 
     /**
      * Run the query
