@@ -23,6 +23,13 @@ class DataTables extends DataTablesQueryBuilders
     protected $model;
 
     /**
+     * Set to true to enable caching
+     *
+     * @var boolean
+     */
+    protected $remember = false;
+
+    /**
      * Set the keys for encrypting
      *
      * @var array
@@ -91,6 +98,7 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function collect($collection)
     {
+        $this->instanceCheck($model);
         $allowedID     = $collection->pluck('id');
         $first         = $collection->first();
         $empty         = new $first;
@@ -144,11 +152,46 @@ class DataTables extends DataTablesQueryBuilders
     }
 
     /**
+     * Enable caching
+     *
+     * @return $thi
+     */
+    public function remember(string $name, int $minutes = 60)
+    {
+        $this->remember = true;
+        $this->cacheName = "$name-{$this->start}-{$this->length}";
+        $this->cacheFor = $minutes;
+        return $this;
+    }
+
+    /**
      * Run the query
      * return as json string
      * @author Wim Pruiksma
      */
     public function get()
+    {
+        if(!Request::has('draw')){
+            return false;
+        }
+        if($this->remember){
+            $data = \Cache::remember($this->cacheName, $this->cacheFor, function () {
+                return $this->execute();
+            });
+        }else{
+            $data = $this->execute();
+        }
+        $data['draw'] = $this->draw;
+        echo json_encode($data);
+        exit;
+    }
+
+    /**
+     * execute the queries
+     *
+     * @return array
+     */
+    protected function execute()
     {
         $model = $this->sortModel();
         $count      = $model->count();
@@ -159,12 +202,10 @@ class DataTables extends DataTablesQueryBuilders
         $filtered   = $model->count();
         $build = $model->slice($this->start, $this->length);
         $collection              = $this->encryptKeys($build->unique()->values()->toArray());
-        $data['draw']            = $this->draw;
         $data['recordsTotal']    = $count;
         $data['recordsFiltered'] = $filtered;
         $data['data']            = $collection;
-        echo json_encode($data);
-        exit;
+        return $data;
     }
 
     /**
