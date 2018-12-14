@@ -13,6 +13,13 @@ You can install the package via composer:
 composer require acfbentveld/laravel-datatables
 ```
 
+## Whats new
+A new method is added since version 2.0.7. Datatables supports caching now :-) wich makes it even faster. 
+The only thing you have to do is call the `remember()` method and pass the parameters.
+```php
+    \DataTables::model(new User)->remember(cache name : "users", mminutes : 60)->get();
+```
+
 ## Sample
 Below is a simple sample of a table that displays the username of the users inside the `User` model.
 First of all. Lets start with the php controller
@@ -101,6 +108,13 @@ At last make a html table. No need to tell you how that works.
 ```
 
 ## Options
+
+#### Caching
+A query takes time and with a lot of data it can take a few moments to show the data.
+When you enable caching it caches the query results. Call the `remember` method and pass the required parameters
+```php
+    \DataTables::model(new User)->remember(cache name : "users", mminutes : 60)->get();
+```
 
 ##### where
 Just the regular where method. Use it to filter the model
