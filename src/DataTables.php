@@ -98,7 +98,7 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function collect($collection)
     {
-        $this->instanceCheck($model);
+        $this->instanceCheck($collection);
         $allowedID     = $collection->pluck('id');
         $first         = $collection->first();
         $empty         = new $first;
