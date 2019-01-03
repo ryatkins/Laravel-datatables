@@ -161,7 +161,7 @@ class DataTables extends DataTablesQueryBuilders
     public function remember(string $name, int $minutes = 60)
     {
         $this->remember = $this->search ? false : true;
-        $this->cacheName = "$name-{$this->start}-{$this->length}";
+        $this->cacheName = "$name-{$this->start}-{$this->length}-{$this->order['dir']}";
         $this->cacheFor = $minutes;
         if ($this->remember && Request::has('draw') && \Cache::has($this->cacheName)) {
             $data = \Cache::get($this->cacheName);
