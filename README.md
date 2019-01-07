@@ -17,7 +17,14 @@ composer require acfbentveld/laravel-datatables
 A new method is added since version 2.0.7. Datatables supports caching now :-) wich makes it even faster. 
 The only thing you have to do is call the `remember()` method and pass the parameters.
 ```php
-    \DataTables::model(new User)->remember(cache name : "users", mminutes : 60)->get();
+    \DataTables::model(new User)->remember(cache name : "users", minutes : 60)->get();
+```
+A new method is added since 2.0.11. For large results the search method is very slow. The new `searchable` method fixes that.
+By defining wich keys you want to search in, the datatables doens't have to create searchable keys itself wich makes it a lot faster.
+```php
+    \DataTables::model(new User)
+        ->searchable('name', 'description', 'roles.name'); //use the relation name and key
+        ->get();
 ```
 
 ## Sample
@@ -114,6 +121,14 @@ A query takes time and with a lot of data it can take a few moments to show the 
 When you enable caching it caches the query results. Call the `remember` method and pass the required parameters
 ```php
     \DataTables::model(new User)->remember(cache name : "users", mminutes : 60)->get();
+```
+
+#### Searchables
+It takes some time to create search keys and find the results. If you define the search keys before executing, the datatables will render a lot faster
+```php
+    \DataTables::model(new User)
+        ->searchable('name', 'description', 'roles.name'); //use the relation name and key
+        ->get();
 ```
 
 ##### where
