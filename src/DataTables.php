@@ -160,26 +160,23 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function remember(string $name, int $minutes = 60)
     {
-        $this->remember = $this->search ? false : true;
-        $this->cacheName = "$name-{$this->start}-{$this->length}-{$this->order['dir']}";
+        $this->remember = true;
+        $this->cacheName = "$name";
         $this->cacheFor = $minutes;
-        if ($this->remember && Request::has('draw') && \Cache::has($this->cacheName)) {
-            $data = \Cache::get($this->cacheName);
-            $data['draw'] = $this->draw;
-            echo json_encode($data);
-            exit;
-        }
         return $this;
     }
 
     /**
-     * @todo Create function to forget the cache files
+     * Set the searchkeys
+     *
+     * @param mixed $searchkeys
+     * @return $this
      */
-    public function forget()
+    public function searchable(... $searchkeys)
     {
-         
+        $this->searchable = $searchkeys;
+        return $this;
     }
-    
 
     /**
      * Run the query
@@ -191,13 +188,7 @@ class DataTables extends DataTablesQueryBuilders
         if(!Request::has('draw')){
             return false;
         }
-        if($this->remember){
-            $data = \Cache::remember($this->cacheName, $this->cacheFor, function () {
-                return $this->execute();
-            });
-        }else{
-            $data = $this->execute();
-        }
+        $data = $this->execute();
         $data['draw'] = $this->draw;
         echo json_encode($data);
         exit;
@@ -210,13 +201,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     protected function execute()
     {
-        $model = $this->sortModel();
-        $count      = $model->count();
-        if ($this->search) {
-            $model = $this->searchOnModel($model);
+        $count = $this->model->count();
+        if ($this->search && $this->searchable) {
+            $this->searchOnModel();
         }
-
-        $filtered   = $model->count();
+        $model = $this->sortModel();
+        if($this->search && !$this->searchable){
+            $model = $this->createMacro($model);
+        }
+        $filtered      = $model->count();
         $build = $model->slice($this->start, $this->length);
         $collection              = $this->encryptKeys($build->unique()->values()->toArray());
         $data['recordsTotal']    = $count;
@@ -232,7 +225,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     private function sortModel()
     {
-        $model = $this->model->get();
+        $model = false;
+        if($this->remember && !$this->search){
+            ini_set('memory_limit', '1G');
+            $model = \Cache::remember($this->cacheName, $this->cacheFor, function () {
+                return $this->model->get();
+            });
+        }else{
+            $model = $this->model->get();
+        }
         return ($this->order['dir'] === 'asc') ? $model->sortBy($this->order['column']) : $model->sortByDesc($this->order['column']);
     }
 
@@ -243,7 +244,41 @@ class DataTables extends DataTablesQueryBuilders
      * @return \Illuminate\Database\Eloquent\Collection
      * @author Wim Pruiksma
      */
-    private function searchOnModel($collection)
+    private function searchOnModel()
+    {
+        foreach($this->searchable as $index => $column){
+            if(str_contains($column, '.')){
+                $this->setSearchOnRelation($column);
+                continue;
+            }
+            if($index === 0){
+                $this->model->where($column, 'LIKE', "%{$this->search['value']}%");
+            }else{
+                $this->model->orWhere($column, 'LIKE', "%{$this->search['value']}%");
+            }
+        }
+    }
+
+    /**
+     * Set relation on search key
+     *
+     * @param string $column
+     */
+    private function setSearchOnRelation(string $column)
+    {
+        $explode = explode('.', $column);
+        $this->model->orWhereHas($explode[0], function($query) use($explode){
+            $query->where($explode[1], 'LIKE', "%{$this->search['value']}%");
+        });
+    }
+
+    /**
+     * Create a macro search on the collection
+     *
+     * @param mixed $collection
+     * @return collection
+     */
+    private function createMacro($collection)
     {
         $this->createSearchMacro();
         if (!$this->searchable) {
