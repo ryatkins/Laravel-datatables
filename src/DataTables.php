@@ -145,7 +145,14 @@ class DataTables extends DataTablesQueryBuilders
      */
     protected function instanceCheck($instance)
     {
-        if (!$instance instanceof \Illuminate\Database\Eloquent\Model && !$instance instanceof \Illuminate\Database\Eloquent\Collection) {
+        if (
+            !$instance instanceof \Illuminate\Database\Eloquent\Model &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Collection &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\BelongsToMany &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\HasMany &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\HasOne
+        ) {
             throw new DataTablesException('Model must be an instance of Illuminate\Database\Eloquent\Model or an instance of Illuminate\Database\Eloquent\Collection');
         }
         return true;
