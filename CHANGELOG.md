@@ -3,6 +3,9 @@
 All notable changes to `DataTables` will be documented in this file
 # Version 2
 
+## 2.0.11
+- Added new instances to the instance check
+
 ## 2.0.7
 - Addes new method (caching)
 - Fixed isseu with finding draw in request
