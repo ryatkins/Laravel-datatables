@@ -70,12 +70,12 @@ class DataTables extends DataTablesQueryBuilders
     protected $searchable;
     
     /**
-     * The table
+     * The table ID
      *
      * @var mixed
      * @author Wim Pruiksma
      */
-    protected $table = false;
+    protected $tableid = false;
 
     /**
      * Set the class and create a new model instance
@@ -200,7 +200,7 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function get()
     {
-        if(!Request::has('draw') || ($this->table !== false && !Request::has($this->table)) ){
+        if(!Request::has('draw') || ($this->tableid !== false && !Request::has($this->tableid)) ){
             return false;
         }
         $data = $this->execute();
@@ -427,7 +427,7 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function table(string $table)
     {
-        $this->table = $table;
+        $this->tableid = $table;
         return $this;
     }
 
