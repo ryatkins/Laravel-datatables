@@ -3,6 +3,9 @@
 All notable changes to `DataTables` will be documented in this file
 # Version 2
 
+## 2.0.13
+- Added new option for multiple datatables on one page
+
 ## 2.0.11
 - Added new instances to the instance check
 
