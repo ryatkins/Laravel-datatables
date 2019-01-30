@@ -68,6 +68,14 @@ class DataTables extends DataTablesQueryBuilders
      * @author Wim Pruiksma
      */
     protected $searchable;
+    
+    /**
+     * The table
+     *
+     * @var mixed
+     * @author Wim Pruiksma
+     */
+    protected $table = false;
 
     /**
      * Set the class and create a new model instance
@@ -192,7 +200,7 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function get()
     {
-        if(!Request::has('draw')){
+        if(!Request::has('draw') || ($this->table !== false && !Request::has($this->table)) ){
             return false;
         }
         $data = $this->execute();
@@ -407,6 +415,19 @@ class DataTables extends DataTablesQueryBuilders
     {
         $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0])) ? $encrypt[0]
                 : $encrypt;
+        return $this;
+    }
+    
+    /**
+     * Set the table
+     *
+     * @param string $table
+     * @return $this
+     * @author Wim Pruiksma
+     */
+    public function table(string $table)
+    {
+        $this->table = $table;
         return $this;
     }
 
