@@ -116,6 +116,23 @@ At last make a html table. No need to tell you how that works.
 
 ## Options
 
+#### Multiple tables on one page
+When using multiple tables on your webpage, you are going to need multiple routes to call the datatables package.
+Or you can use the `table` method. 
+```php
+    \DataTables::model(new User)->table('users')->get(); //will be initialized when the table parameter is users
+    
+    \DataTables::model(new User)->table('roles')->get(); //will be initialized when the table parameter is roles
+```
+In your javascript you can call it like this
+```javascript
+$('#userstable').DataTable({
+    "processing": true,
+    "serverSide": true,
+    "ajax": location.href + '?table=users' //add the table parameter to make it inique
+});
+```
+
 #### Caching
 A query takes time and with a lot of data it can take a few moments to show the data.
 When you enable caching it caches the query results. Call the `remember` method and pass the required parameters
