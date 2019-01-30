@@ -200,7 +200,10 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function get()
     {
-        if(!Request::has('draw') || ($this->tableid !== false && !Request::has($this->tableid)) ){
+        if(!Request::has('draw')
+            || ($this->tableid !== false
+            && Request::has("table")
+            && Request::get('table') !== $this->tableid) ){
             return false;
         }
         $data = $this->execute();
