@@ -1,6 +1,30 @@
 # Changelog
 
 All notable changes to `DataTables` will be documented in this file
+# Version 2
+
+## 2.0.16
+- Fixed issue #3
+
+## 2.0.13
+- Added new option for multiple datatables on one page
+
+## 2.0.11
+- Added new instances to the instance check
+
+## 2.0.7
+- Addes new method (caching)
+- Fixed isseu with finding draw in request
+
+## 2.0.6
+- Issue fixes
+- Performance updates
+
+## 2.0.*
+- Updated to laravel 5.6.^
+- Update requirement for php 7.1 or higher
+
+# Version 1
 
 ## 1.0.7
 - Added functionality to add model scopes to the collection

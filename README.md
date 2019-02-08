@@ -13,6 +13,20 @@ You can install the package via composer:
 composer require acfbentveld/laravel-datatables
 ```
 
+## Whats new
+A new method is added since 2.0.11. For large results the search method is very slow. The new `searchable` method fixes that.
+By defining wich keys you want to search in, the datatables doens't have to create searchable keys itself wich makes it a lot faster.
+```php
+    \DataTables::model(new User)
+        ->searchable('name', 'description', 'roles.name'); //use the relation name and key
+        ->get();
+```
+A new method is added since version 2.0.7. Datatables supports caching now :-) wich makes it even faster. 
+The only thing you have to do is call the `remember()` method and pass the parameters.
+```php
+    \DataTables::model(new User)->remember(cache name : "users", minutes : 60)->get();
+```
+
 ## Sample
 Below is a simple sample of a table that displays the username of the users inside the `User` model.
 First of all. Lets start with the php controller
@@ -101,6 +115,38 @@ At last make a html table. No need to tell you how that works.
 ```
 
 ## Options
+
+#### Multiple tables on one page
+When using multiple tables on your webpage, you are going to need multiple routes to call the datatables package.
+Or you can use the `table` method. 
+```php
+    \DataTables::model(new User)->table('users')->get(); //will be initialized when the table parameter is users
+    
+    \DataTables::model(new User)->table('roles')->get(); //will be initialized when the table parameter is roles
+```
+In your javascript you can call it like this
+```javascript
+$('#userstable').DataTable({
+    "processing": true,
+    "serverSide": true,
+    "ajax": location.href + '?table=users' //add the table parameter to make it inique
+});
+```
+
+#### Caching
+A query takes time and with a lot of data it can take a few moments to show the data.
+When you enable caching it caches the query results. Call the `remember` method and pass the required parameters
+```php
+    \DataTables::model(new User)->remember(cache name : "users", mminutes : 60)->get();
+```
+
+#### Searchables
+It takes some time to create search keys and find the results. If you define the search keys before executing, the datatables will render a lot faster
+```php
+    \DataTables::model(new User)
+        ->searchable('name', 'description', 'roles.name'); //use the relation name and key
+        ->get();
+```
 
 ##### where
 Just the regular where method. Use it to filter the model

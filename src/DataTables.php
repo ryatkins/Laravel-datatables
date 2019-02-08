@@ -68,6 +68,14 @@ class DataTables extends DataTablesQueryBuilders
      * @author Wim Pruiksma
      */
     protected $searchable;
+    
+    /**
+     * The table ID
+     *
+     * @var mixed
+     * @author Wim Pruiksma
+     */
+    protected $tableid = false;
 
     /**
      * Set the class and create a new model instance
@@ -98,13 +106,13 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function collect($collection)
     {
-        $this->instanceCheck($model);
+        $this->instanceCheck($collection);
         $allowedID     = $collection->pluck('id');
         $first         = $collection->first();
-        $empty         = new $first;
+        $empty         = $first ? new $first : null;
         $this->build();
-        $this->model   = $first::query()->whereIn('id', $allowedID);
-        $this->table   = $empty->getTable();
+        $this->model   = $first ? $first::query()->whereIn('id', $allowedID) : null;
+        $this->table   = $first ? $empty->getTable() : null;
         $this->columns = Schema::getColumnListing($this->table);
         return $this;
     }
@@ -145,7 +153,14 @@ class DataTables extends DataTablesQueryBuilders
      */
     protected function instanceCheck($instance)
     {
-        if (!$instance instanceof \Illuminate\Database\Eloquent\Model && !$instance instanceof \Illuminate\Database\Eloquent\Collection) {
+        if (
+            !$instance instanceof \Illuminate\Database\Eloquent\Model &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Collection &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\BelongsToMany &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\HasMany &&
+            !$instance instanceof \Illuminate\Database\Eloquent\Relations\HasOne
+        ) {
             throw new DataTablesException('Model must be an instance of Illuminate\Database\Eloquent\Model or an instance of Illuminate\Database\Eloquent\Collection');
         }
         return true;
@@ -153,14 +168,28 @@ class DataTables extends DataTablesQueryBuilders
 
     /**
      * Enable caching
+     * Check if the cache exists.
+     * If the cache exists, stop executing and return the json
      *
      * @return $thi
      */
     public function remember(string $name, int $minutes = 60)
     {
         $this->remember = true;
-        $this->cacheName = "$name-{$this->start}-{$this->length}";
+        $this->cacheName = "$name";
         $this->cacheFor = $minutes;
+        return $this;
+    }
+
+    /**
+     * Set the searchkeys
+     *
+     * @param mixed $searchkeys
+     * @return $this
+     */
+    public function searchable(... $searchkeys)
+    {
+        $this->searchable = $searchkeys;
         return $this;
     }
 
@@ -171,16 +200,13 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function get()
     {
-        if(!Request::has('draw')){
+        if(!Request::has('draw')
+            || ($this->tableid !== false
+            && Request::has("table")
+            && Request::get('table') !== $this->tableid) ){
             return false;
         }
-        if($this->remember){
-            $data = \Cache::remember($this->cacheName, $this->cacheFor, function () {
-                return $this->execute();
-            });
-        }else{
-            $data = $this->execute();
-        }
+        $data = $this->execute();
         $data['draw'] = $this->draw;
         echo json_encode($data);
         exit;
@@ -193,18 +219,24 @@ class DataTables extends DataTablesQueryBuilders
      */
     protected function execute()
     {
-        $model = $this->sortModel();
-        $count      = $model->count();
-        if ($this->search) {
-            $model = $this->searchOnModel($model);
+        $count = $this->model ? $this->model->count() : 0;
+        if ($this->model && $this->search && $this->searchable) {
+            $this->searchOnModel();
+        }
+        $model = $this->model ? $this->sortModel() : null;
+        if($this->model && $this->search && !$this->searchable){
+            $model = $this->createMacro($model);
         }
 
-        $filtered   = $model->count();
-        $build = $model->slice($this->start, $this->length);
-        $collection              = $this->encryptKeys($build->unique()->values()->toArray());
+        $filtered                = $model ? $model->count() : 0;
+        $build                   = $model ? $model->slice($this->start, $this->length) : [];
+        if($model){
+            $collection              = $this->encryptKeys($build->unique()->values()->toArray());
+        }
+        
         $data['recordsTotal']    = $count;
         $data['recordsFiltered'] = $filtered;
-        $data['data']            = $collection;
+        $data['data']            = $collection ?? [];
         return $data;
     }
 
@@ -215,7 +247,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     private function sortModel()
     {
-        $model = $this->model->get();
+        $model = false;
+        if($this->remember && !$this->search){
+            ini_set('memory_limit', '1G');
+            $model = \Cache::remember($this->cacheName, $this->cacheFor, function () {
+                return $this->model->get();
+            });
+        }else{
+            $model = $this->model->get();
+        }
         return ($this->order['dir'] === 'asc') ? $model->sortBy($this->order['column']) : $model->sortByDesc($this->order['column']);
     }
 
@@ -226,7 +266,41 @@ class DataTables extends DataTablesQueryBuilders
      * @return \Illuminate\Database\Eloquent\Collection
      * @author Wim Pruiksma
      */
-    private function searchOnModel($collection)
+    private function searchOnModel()
+    {
+        foreach($this->searchable as $index => $column){
+            if(str_contains($column, '.')){
+                $this->setSearchOnRelation($column);
+                continue;
+            }
+            if($index === 0){
+                $this->model->where($column, 'LIKE', "%{$this->search['value']}%");
+            }else{
+                $this->model->orWhere($column, 'LIKE', "%{$this->search['value']}%");
+            }
+        }
+    }
+
+    /**
+     * Set relation on search key
+     *
+     * @param string $column
+     */
+    private function setSearchOnRelation(string $column)
+    {
+        $explode = explode('.', $column);
+        $this->model->orWhereHas($explode[0], function($query) use($explode){
+            $query->where($explode[1], 'LIKE', "%{$this->search['value']}%");
+        });
+    }
+
+    /**
+     * Create a macro search on the collection
+     *
+     * @param mixed $collection
+     * @return collection
+     */
+    private function createMacro($collection)
     {
         $this->createSearchMacro();
         if (!$this->searchable) {
@@ -348,6 +422,19 @@ class DataTables extends DataTablesQueryBuilders
     {
         $this->encrypt = (isset($encrypt[0]) && is_array($encrypt[0])) ? $encrypt[0]
                 : $encrypt;
+        return $this;
+    }
+    
+    /**
+     * Set the table
+     *
+     * @param string $table
+     * @return $this
+     * @author Wim Pruiksma
+     */
+    public function table(string $table)
+    {
+        $this->tableid = $table;
         return $this;
     }
 
