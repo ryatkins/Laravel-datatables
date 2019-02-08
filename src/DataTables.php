@@ -109,10 +109,10 @@ class DataTables extends DataTablesQueryBuilders
         $this->instanceCheck($collection);
         $allowedID     = $collection->pluck('id');
         $first         = $collection->first();
-        $empty         = new $first;
+        $empty         = $first ? new $first : null;
         $this->build();
-        $this->model   = $first::query()->whereIn('id', $allowedID);
-        $this->table   = $empty->getTable();
+        $this->model   = $first ? $first::query()->whereIn('id', $allowedID) : null;
+        $this->table   = $first ? $empty->getTable() : null;
         $this->columns = Schema::getColumnListing($this->table);
         return $this;
     }
@@ -219,20 +219,24 @@ class DataTables extends DataTablesQueryBuilders
      */
     protected function execute()
     {
-        $count = $this->model->count();
-        if ($this->search && $this->searchable) {
+        $count = $this->model ? $this->model->count() : 0;
+        if ($this->model && $this->search && $this->searchable) {
             $this->searchOnModel();
         }
-        $model = $this->sortModel();
-        if($this->search && !$this->searchable){
+        $model = $this->model ? $this->sortModel() : null;
+        if($this->model && $this->search && !$this->searchable){
             $model = $this->createMacro($model);
         }
-        $filtered      = $model->count();
-        $build = $model->slice($this->start, $this->length);
-        $collection              = $this->encryptKeys($build->unique()->values()->toArray());
+
+        $filtered                = $model ? $model->count() : 0;
+        $build                   = $model ? $model->slice($this->start, $this->length) : [];
+        if($model){
+            $collection              = $this->encryptKeys($build->unique()->values()->toArray());
+        }
+        
         $data['recordsTotal']    = $count;
         $data['recordsFiltered'] = $filtered;
-        $data['data']            = $collection;
+        $data['data']            = $collection ?? [];
         return $data;
     }
 

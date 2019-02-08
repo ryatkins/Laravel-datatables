@@ -3,6 +3,9 @@
 All notable changes to `DataTables` will be documented in this file
 # Version 2
 
+## 2.0.16
+- Fixed issue #3
+
 ## 2.0.13
 - Added new option for multiple datatables on one page
 
