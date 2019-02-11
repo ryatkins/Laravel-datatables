@@ -326,7 +326,7 @@ class DataTables extends DataTablesQueryBuilders
         $explode = explode('.', $column);
 
         $this->model = $this->model->orWhereHas($explode[0], function($query) use($explode){
-            $query->where("lower(`$explode[1]`)", 'LIKE', "%{$this->search['value']}%");
+            $query->whereRaw("lower(`$explode[1]`) LIKE ?", "%{$this->search['value']}%");
         });
         
     }
