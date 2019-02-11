@@ -3,6 +3,9 @@
 All notable changes to `DataTables` will be documented in this file
 # Version 2
 
+## 2.0.18
+- bug fixes
+
 ## 2.0.17
 - Performance improvement
 - Removed the cache method for it is not usable
