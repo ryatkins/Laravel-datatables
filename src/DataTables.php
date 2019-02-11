@@ -78,6 +78,14 @@ class DataTables extends DataTablesQueryBuilders
     protected $tableid = false;
 
     /**
+     * If datables has searchable keys
+     *
+     * @var boolean
+     * @author Wim Pruiksma
+     */
+    protected $hasSearchable = false;
+
+    /**
      * Set the class and create a new model instance
      *
      * @param \Illuminate\Database\Eloquent\Model $model
@@ -87,6 +95,7 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function model($model)
     {
+        $this->startTime = microtime(true);
         $this->instanceCheck($model);
         $this->build();
         $this->model   = $model;
@@ -171,7 +180,8 @@ class DataTables extends DataTablesQueryBuilders
      * Check if the cache exists.
      * If the cache exists, stop executing and return the json
      *
-     * @return $thi
+     * @return $this
+     * @deprecated since version 2.0.17
      */
     public function remember(string $name, int $minutes = 60)
     {
@@ -190,6 +200,7 @@ class DataTables extends DataTablesQueryBuilders
     public function searchable(... $searchkeys)
     {
         $this->searchable = $searchkeys;
+        $this->hasSearchable = true;
         return $this;
     }
 
@@ -206,9 +217,21 @@ class DataTables extends DataTablesQueryBuilders
             && Request::get('table') !== $this->tableid) ){
             return false;
         }
+        
         $data = $this->execute();
         $data['draw'] = $this->draw;
-        echo json_encode($data);
+
+        $this->startTime = "Elapsed time is: ". (microtime(true) - $this->startTime) ." seconds";
+        
+        $response = response()->json($data);
+
+
+//        dd($this);
+        foreach($response->headers->all() as $header => $value){
+            $set = implode($value, ',');
+            header("$header: $set");
+        }
+        echo $response->getContent();
         exit;
     }
 
@@ -220,23 +243,27 @@ class DataTables extends DataTablesQueryBuilders
     protected function execute()
     {
         $count = $this->model ? $this->model->count() : 0;
-        if ($this->model && $this->search && $this->searchable) {
+
+        if ($this->model && $this->search && $this->hasSearchable) {
             $this->searchOnModel();
         }
+        
         $model = $this->model ? $this->sortModel() : null;
-        if($this->model && $this->search && !$this->searchable){
-            $model = $this->createMacro($model);
-        }
+        
+        $build = collect([]);        
 
-        $filtered                = $model ? $model->count() : 0;
-        $build                   = $model ? $model->slice($this->start, $this->length) : [];
+        $model->each(function($item, $key) use ($build) {
+            $build->put($key+$this->start, $item);
+        });
+
         if($model){
-            $collection              = $this->encryptKeys($build->unique()->values()->toArray());
+            $collection  = $this->encryptKeys($build->unique()->values()->toArray());
         }
         
         $data['recordsTotal']    = $count;
-        $data['recordsFiltered'] = $filtered;
+        $data['recordsFiltered'] = $count;
         $data['data']            = $collection ?? [];
+        
         return $data;
     }
 
@@ -246,17 +273,22 @@ class DataTables extends DataTablesQueryBuilders
      * @return \Illuminate\Database\Eloquent\Collection
      */
     private function sortModel()
-    {
-        $model = false;
-        if($this->remember && !$this->search){
-            ini_set('memory_limit', '1G');
-            $model = \Cache::remember($this->cacheName, $this->cacheFor, function () {
-                return $this->model->get();
-            });
+    {      
+        if($this->hasSearchable){
+            $model = $this->model->skip($this->start)->take($this->length)->get();
         }else{
             $model = $this->model->get();
         }
-        return ($this->order['dir'] === 'asc') ? $model->sortBy($this->order['column']) : $model->sortByDesc($this->order['column']);
+
+        if($this->search && !$this->hasSearchable){
+            $model = $this->searchOnCollection($model);
+        }
+
+        if(!$this->hasSearchable){
+            return $model->slice($this->start, $this->length);
+        }
+
+        return $model;
     }
 
     /**
@@ -269,15 +301,18 @@ class DataTables extends DataTablesQueryBuilders
     private function searchOnModel()
     {
         foreach($this->searchable as $index => $column){
+
             if(str_contains($column, '.')){
                 $this->setSearchOnRelation($column);
                 continue;
             }
+
             if($index === 0){
-                $this->model->where($column, 'LIKE', "%{$this->search['value']}%");
+                $this->model = $this->model->whereRaw("lower(`$column`) LIKE ?", "%{$this->search['value']}%");
             }else{
-                $this->model->orWhere($column, 'LIKE', "%{$this->search['value']}%");
+                $this->model = $this->model->orWhereRaw("lower(`$column`) LIKE ?", "%{$this->search['value']}%");
             }
+            
         }
     }
 
@@ -289,9 +324,11 @@ class DataTables extends DataTablesQueryBuilders
     private function setSearchOnRelation(string $column)
     {
         $explode = explode('.', $column);
-        $this->model->orWhereHas($explode[0], function($query) use($explode){
-            $query->where($explode[1], 'LIKE', "%{$this->search['value']}%");
+
+        $this->model = $this->model->orWhereHas($explode[0], function($query) use($explode){
+            $query->where("lower(`$explode[1]`)", 'LIKE', "%{$this->search['value']}%");
         });
+        
     }
 
     /**
@@ -300,12 +337,10 @@ class DataTables extends DataTablesQueryBuilders
      * @param mixed $collection
      * @return collection
      */
-    private function createMacro($collection)
+    private function searchOnCollection($collection)
     {
         $this->createSearchMacro();
-        if (!$this->searchable) {
-            $this->createSearchableKeys();
-        }
+        $this->createSearchableKeys();
         $search = $this->search['value'];
         $result = [];
         foreach ($this->searchable as $searchKey) {
@@ -336,8 +371,7 @@ class DataTables extends DataTablesQueryBuilders
                 if (optional($builder->first()->$name)->first()) {
                     $collect = $builder->first()->$name;
                     foreach ($collect->first()->toArray() as $col => $value) {
-                        $type               = $collect instanceof \Illuminate\Database\Eloquent\Collection
-                                ? '.*.' : '.';
+                        $type  = $collect instanceof \Illuminate\Database\Eloquent\Collection ? '.*.' : '.';
                         $this->searchable[] = $name.$type.$col;
                     }
                 }
