@@ -124,7 +124,7 @@ In your javascript you can call it like this
 $('#userstable').DataTable({
     "processing": true,
     "serverSide": true,
-    "ajax": location.href + '?table=users' //add the table parameter to make it inique
+    "ajax": location.href + '?table=users' //add the table parameter to make it unique
 });
 ```
 
