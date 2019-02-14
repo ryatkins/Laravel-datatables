@@ -273,11 +273,11 @@ class DataTables extends DataTablesQueryBuilders
      * @return \Illuminate\Database\Eloquent\Collection
      */
     private function sortModel()
-    {      
+    {
         if($this->hasSearchable){
-            $model = $this->model->skip($this->start)->take($this->length)->get();
+            $model = $this->model->orderBy($this->order['column'], $this->order['dir'])->skip($this->start)->take($this->length)->get();
         }else{
-            $model = $this->model->get();
+            $model = $this->model->orderBy($this->order['column'], $this->order['dir'])->get();
         }
 
         if($this->search && !$this->hasSearchable){
