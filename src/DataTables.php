@@ -282,10 +282,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     private function sortModel()
     {
-        if($this->hasSearchable){
-            $model = $this->model->orderBy($this->order['column'], $this->order['dir'])->skip($this->start)->take($this->length)->get();
+
+        $build = $this->hasSearchable ? $this->model->skip($this->start)->take($this->length) : $this->model;
+
+        $sortByRelation = str_contains($this->order['column'], '.');
+
+        if($sortByRelation){
+            $model = $this->order['dir'] === 'asc' ? $build->get()->sortBy($this->order['column']) : $build->get()->sortByDesc($this->order['column']);
         }else{
-            $model = $this->model->orderBy($this->order['column'], $this->order['dir'])->get();
+            $model = $build->orderBy($this->order['column'], $this->order['dir'])->get();
         }
 
         if($this->search && !$this->hasSearchable){
