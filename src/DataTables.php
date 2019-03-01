@@ -199,7 +199,15 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function searchable(... $searchkeys)
     {
-        $this->searchable = $searchkeys;
+        $last = [];
+        foreach($searchkeys as $key => $value){
+            if(str_contains($value, '.')){
+                $last[] = $value;
+            }else{
+                $this->searchable[] = $value;
+            }
+        }
+        $this->searchable = array_merge($this->searchable, $last);
         $this->hasSearchable = true;
         return $this;
     }
