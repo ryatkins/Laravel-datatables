@@ -95,7 +95,6 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function model($model)
     {
-        $this->startTime = microtime(true);
         $this->instanceCheck($model);
         $this->build();
         $this->model   = $model;
@@ -228,13 +227,9 @@ class DataTables extends DataTablesQueryBuilders
         
         $data = $this->execute();
         $data['draw'] = $this->draw;
-
-        $this->startTime = "Elapsed time is: ". (microtime(true) - $this->startTime) ." seconds";
         
         $response = response()->json($data);
 
-
-//        dd($this);
         foreach($response->headers->all() as $header => $value){
             $set = implode($value, ',');
             header("$header: $set");
