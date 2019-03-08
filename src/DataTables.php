@@ -139,7 +139,8 @@ class DataTables extends DataTablesQueryBuilders
             $this->response = 'json';
         }
         $this->draw   = Request::get('draw');
-        $this->column = Request::get('columns');
+        $this->column = $this->filterColumns(Request::get('columns'));
+        dd($this);
         $this->order  = [
             'column' => $this->column[Request::get('order')[0]['column']]['data'],
             'dir' => Request::get('order')[0]['dir']
@@ -149,6 +150,24 @@ class DataTables extends DataTablesQueryBuilders
         $this->search = (Request::has('search') && Request::get('search')['value'])
                 ? Request::get('search') : null;
         return $this;
+    }
+
+    /**
+     * Filter columns on nullable results
+     * Remove them from the arrya
+     *
+     * @param array $columns
+     */
+    private function filterColumns(array $columns)
+    {
+        $fields = [];
+        foreach($columns as $key => $column){
+            if( $column['data'] &&  $column['name']){
+                $fields[] = $column;
+            }
+        }
+
+        return $fields;
     }
 
     /**
