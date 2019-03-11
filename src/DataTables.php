@@ -133,22 +133,19 @@ class DataTables extends DataTablesQueryBuilders
      */
     public function build()
     {
-        if (Request::has('response')) {
-            $this->response = Request::get('response');
-        } elseif (Request::has('draw')) {
+        if (Request::has('draw')) {
             $this->response = 'json';
+        
+            $this->draw   = Request::get('draw');
+            $this->column = $this->filterColumns(Request::get('columns'));
+            $this->order  = [
+                'column' => $this->column[Request::get('order')[0]['column']]['data'],
+                'dir' => Request::get('order')[0]['dir']
+            ];
+            $this->start  = Request::get('start');
+            $this->length = Request::get('length');
+            $this->search = Request::has('search') && Request::get('search')['value'] ? Request::get('search') : null;
         }
-        $this->draw   = Request::get('draw');
-        $this->column = $this->filterColumns(Request::get('columns'));
-        dd($this);
-        $this->order  = [
-            'column' => $this->column[Request::get('order')[0]['column']]['data'],
-            'dir' => Request::get('order')[0]['dir']
-        ];
-        $this->start  = Request::get('start');
-        $this->length = Request::get('length');
-        $this->search = (Request::has('search') && Request::get('search')['value'])
-                ? Request::get('search') : null;
         return $this;
     }
 
@@ -158,15 +155,17 @@ class DataTables extends DataTablesQueryBuilders
      *
      * @param array $columns
      */
-    private function filterColumns(array $columns)
+    private function filterColumns(array $columns = null)
     {
+        if(!$columns){
+            return [];
+        }
         $fields = [];
         foreach($columns as $key => $column){
-            if( $column['data'] &&  $column['name']){
+            if( $column['data'] ||  $column['name']){
                 $fields[] = $column;
             }
         }
-
         return $fields;
     }
 
