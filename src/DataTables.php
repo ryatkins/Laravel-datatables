@@ -334,9 +334,9 @@ class DataTables extends DataTablesQueryBuilders
             }
 
             if($index === 0){
-                $this->model = $this->model->whereRaw("lower(`$column`) LIKE ?", "%{$this->search['value']}%");
+                $this->model = $this->model->whereRaw("lower($column) LIKE ?", "%{$this->search['value']}%");
             }else{
-                $this->model = $this->model->orWhereRaw("lower(`$column`) LIKE ?", "%{$this->search['value']}%");
+                $this->model = $this->model->orWhereRaw("lower($column) LIKE ?", "%{$this->search['value']}%");
             }
             
         }
@@ -352,7 +352,7 @@ class DataTables extends DataTablesQueryBuilders
         $explode = explode('.', $column);
 
         $this->model = $this->model->orWhereHas($explode[0], function($query) use($explode){
-            $query->whereRaw("lower(`$explode[1]`) LIKE ?", "%{$this->search['value']}%");
+            $query->whereRaw("lower($explode[1]) LIKE ?", "%{$this->search['value']}%");
         });
         
     }
